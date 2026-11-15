@@ -7,7 +7,7 @@ Usage (headless):
     --layout L.json --posters DIR --usdz room.usdz --hdr room.hdr
 
 When immersive, the model's origin is at the reader's feet and its scale is real (WWDC26
-session 320), so the room is built around the origin in metres. The reader looks along -Z
+session 320), so the room is built around the origin in meters. The reader looks along -Z
 in USD (+Y in Blender). Safari's window opens straight ahead, in front of the room, so the
 case wall is turned 40 degrees to the left, where the window does not hide it.
 """
@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from export_case import build_case, use_usd_materials  # noqa: E402
 from render_case import hex_rgba, principled  # noqa: E402
 
-# The room's inside, in metres (Blender: x right, y ahead, z up).
+# The room's inside, in meters (Blender: x right, y ahead, z up).
 ROOM = {"x0": -2.4, "x1": 2.4, "y0": -2.2, "y1": 2.6, "height": 2.8}
 WALL = 0.1  # thickness, outside the room
 CASE_BOTTOM = 0.95  # the case's centre at 1.45 m, a standing reader's eye height

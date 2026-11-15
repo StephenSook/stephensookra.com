@@ -435,7 +435,7 @@ test("in an emulated Quest 3 in an office: look at a wall, hang the case there, 
   await cardOut(page);
   await selectUntil(page, "controller", WALL_CLOSE, "On your wall", RIGHT_TURNED);
 
-  // The reader walks half a metre to the side and closer: the case stays on the wall.
+  // The reader walks half a meter to the side and closer: the case stays on the wall.
   const step = new THREE.Vector3(0.5, 0, 0.4);
   await page.evaluate(([x, z]) => {
     const device = (window as unknown as { __xrDevice: { position: { set(x: number, y: number, z: number): void } } })

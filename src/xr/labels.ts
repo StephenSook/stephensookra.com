@@ -1,6 +1,6 @@
 import type { CaseLayout } from "@/scene/layout";
 
-/** Cap-to-baseline size of a slot label in metres: about 1.1 degrees of view at 1 m. */
+/** Cap-to-baseline size of a slot label in meters: about 1.1 degrees of view at 1 m. */
 export const LABEL_SIZE = 0.02;
 const INSET = 0.012;
 

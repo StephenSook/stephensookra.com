@@ -37,7 +37,7 @@ if [ "$(head -c 10 "$WORK/room.hdr")" != "#?RADIANCE" ]; then
   echo "room.hdr is not a Radiance HDR" >&2
   exit 1
 fi
-# Apple's own ARKit check, and the stage must be y-up and in metres (Blender is z-up).
+# Apple's own ARKit check, and the stage must be y-up and in meters (Blender is z-up).
 usdchecker --arkit "$WORK/room.usdz" > "$WORK/usdchecker.log" 2>&1 || {
   echo "room.usdz fails usdchecker --arkit; see $WORK/usdchecker.log" >&2
   exit 1

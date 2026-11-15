@@ -2,7 +2,7 @@
  * Layout math for the lit letter case. One model (case-spec.json) feeds this file,
  * the React Three Fiber scene and the Blender poster script, so they cannot drift.
  *
- * Coordinates: metres, origin at the centre of the case, x to the right, y up,
+ * Coordinates: meters, origin at the centre of the case, x to the right, y up,
  * z towards the viewer (front face at +depth/2). Boxes are centre-based.
  */
 export type Box = { x: number; y: number; z: number; w: number; h: number; d: number };

@@ -8,7 +8,7 @@ Usage (headless):
 
 The case is real size (1.6 x 1.0 x 0.14 m), its front faces the viewer (+Z in glTF), and its
 origin is the bottom centre, so it stands on a floor or table where AR puts it. Layout
-coordinates are metres, y up, z towards the viewer; Blender is z up, so (x, y, z) becomes
+coordinates are meters, y up, z towards the viewer; Blender is z up, so (x, y, z) becomes
 (x, -z, y + height / 2).
 """
 

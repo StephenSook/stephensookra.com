@@ -4,7 +4,7 @@
 Usage (headless):
   Blender -b --factory-startup -P scripts/blender/render_case.py -- --scheme light --out out.png
 
-Coordinates: the layout uses metres with y up and z towards the viewer. Blender uses
+Coordinates: the layout uses meters with y up and z towards the viewer. Blender uses
 z up, so (x, y, z) maps to (x, -z, y).
 """
 

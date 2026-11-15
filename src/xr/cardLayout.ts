@@ -1,4 +1,4 @@
-/** The pulled card's size and resting place, in metres (case space). Plain numbers, so tests
+/** The pulled card's size and resting place, in meters (case space). Plain numbers, so tests
  * can aim at it without loading the scene. */
 export const PANEL = { w: 0.62, h: 0.3 } as const;
 /** The card rests centred, this far in front of the case face (about 0.6 m from the viewer). */
