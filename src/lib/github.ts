@@ -100,7 +100,12 @@ async function readAllRuns(fetcher: typeof fetch, repo: string, sha: string): Pr
       runsSchema,
     );
     runs.push(...batch.workflow_runs);
-    if (runs.length >= batch.total_count || batch.workflow_runs.length === 0) return runs;
+    if (runs.length >= batch.total_count) return runs;
+    // An empty page before the reported count is met means the list shifted or is
+    // incomplete; a verdict on part of the runs could hide a failure.
+    if (batch.workflow_runs.length === 0) {
+      throw new ReadFailed(`/repos/${repo}/actions/runs: ${runs.length} of ${batch.total_count} runs`);
+    }
   }
   throw new ReadFailed(`/repos/${repo}/actions/runs: more than ${MAX_RUN_PAGES * RUNS_PER_PAGE} runs`);
 }

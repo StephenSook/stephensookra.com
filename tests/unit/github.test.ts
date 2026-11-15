@@ -118,6 +118,22 @@ describe("getRepoStatus", () => {
       const { fetcher } = paged(null);
       expect((await getRepoStatus("StephenSook/case-light", fetcher)).state).toBe("unavailable");
     });
+
+    it("returns unavailable when a page comes back empty before the reported count is met", async () => {
+      const base = fakeFetch(okRoutes);
+      const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(String(input));
+        if (url.pathname.endsWith("/actions/runs")) {
+          const page = url.searchParams.get("page");
+          return Response.json({
+            total_count: 101,
+            workflow_runs: page === "1" ? Array.from({ length: 100 }, () => success) : [],
+          });
+        }
+        return base.fetcher(input, init);
+      }) as typeof fetch;
+      expect((await getRepoStatus("StephenSook/case-light", fetcher)).state).toBe("unavailable");
+    });
   });
 
   it("returns unavailable for a malformed commit date instead of a status that crashes rendering", async () => {
