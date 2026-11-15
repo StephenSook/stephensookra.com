@@ -9,7 +9,9 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "measure:fcp": "node scripts/measure-fcp.mjs",
+    "stills": "node scripts/stills.mjs"
   },
   "dependencies": {
     "next": "16.4.6",
@@ -38,7 +40,7 @@
     "vitest": "5.1.0"
   },
   "engines": {
-    "node": ">=22.19"
+    "node": "22.x"
   },
   "overrides": {
     "tldts": "7.5.3"
