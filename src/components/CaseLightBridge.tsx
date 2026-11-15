@@ -3,8 +3,15 @@
 import { useEffect, useRef } from "react";
 import { caseLight } from "@/scene/caseLight";
 
-const slugOf = (target: EventTarget | null): string | null =>
-  target instanceof Element ? (target.closest("[data-slug]")?.getAttribute("data-slug") ?? null) : null;
+/** The slug of the card under a target, or "row:<name>" for a row link (data-light). */
+const slugOf = (target: EventTarget | null): string | null => {
+  if (!(target instanceof Element)) return null;
+  const el = target.closest("[data-slug], [data-light]");
+  if (!el) return null;
+  const slug = el.getAttribute("data-slug");
+  if (slug) return slug;
+  return `row:${el.getAttribute("data-light")}`;
+};
 
 /**
  * Links the HTML grid to the lit case. Hovering or focusing a card lights its slot in the

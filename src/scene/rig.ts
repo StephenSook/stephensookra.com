@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { ROW_LIGHTS } from "./caseLight";
 import { damp, LIGHT_RATE } from "./damping";
 import type { Box, CaseLayout } from "./layout";
 import { createSlotMaterial, SLOT_ATTRIBUTES } from "./slotMaterial";
@@ -47,6 +48,7 @@ export function createRig(layout: CaseLayout) {
   group.add(instanced(backs, backGeometry, slotMaterial));
 
   const slugs = layout.projectSlots.map((s) => s.slug);
+  const rows = layout.projectSlots.map((s) => s.row);
   const tilt = { x: 0, y: 0, tx: 0, ty: 0 };
   let atlas: THREE.Texture | null = null;
 
@@ -78,11 +80,15 @@ export function createRig(layout: CaseLayout) {
       tilt.ty = ndc ? THREE.MathUtils.clamp(ndc.x, -1, 1) * MAX_TILT : 0;
     },
 
-    /** Advances the easing by dt seconds; returns true while anything is still moving. */
-    step(litSlug: string | null, dt: number): boolean {
+    /**
+     * Advances the easing by dt seconds; returns true while anything is still moving.
+     * `lit` is a project slug, or a row light such as "row:xr" that lights a whole row.
+     */
+    step(lit: string | null, dt: number): boolean {
       let moving = false;
+      const litRow = lit ? ROW_LIGHTS[lit] : undefined;
       slugs.forEach((slug, i) => {
-        const target = slug === litSlug ? 1 : 0;
+        const target = slug === lit || rows[i] === litRow ? 1 : 0;
         const next = damp(litAttr.getX(i), target, LIGHT_RATE, dt);
         const settled = Math.abs(next - target) <= SETTLED;
         if (!settled) moving = true;

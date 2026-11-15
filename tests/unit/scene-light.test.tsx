@@ -62,6 +62,18 @@ describe("CaseLightBridge", () => {
     expect(caseLight.get().slug).toBeNull();
   });
 
+  it("lights a whole row from the XR work and Software work links", () => {
+    const { getByText } = render(
+      <CaseLightBridge>
+        <a href="#xr" data-light="xr">
+          XR work
+        </a>
+      </CaseLightBridge>,
+    );
+    fireEvent.pointerOver(getByText("XR work"));
+    expect(caseLight.get().slug).toBe("row:xr");
+  });
+
   it("marks the card the scene lights, and only that card", () => {
     const { container } = render(<Grid />);
     act(() => caseLight.set("scene", "glare-zone"));

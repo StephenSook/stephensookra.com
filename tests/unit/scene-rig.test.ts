@@ -28,6 +28,15 @@ describe("case rig", () => {
     rig.dispose();
   });
 
+  it("lights every slot in a row for a row light", () => {
+    const rig = createRig(layout);
+    for (let i = 0; i < 120; i++) rig.step("row:xr", 1 / 60);
+    for (const s of layout.projectSlots) expect(rig.litValue(s.slug), s.slug).toBe(s.row === "A" ? 1 : 0);
+    for (let i = 0; i < 120; i++) rig.step("row:software", 1 / 60);
+    for (const s of layout.projectSlots) expect(rig.litValue(s.slug), s.slug).toBe(s.row === "B" ? 1 : 0);
+    rig.dispose();
+  });
+
   it("never lights a small cell", () => {
     const rig = createRig(layout);
     for (let i = 0; i < 120; i++) rig.step("aloud", 1 / 60);

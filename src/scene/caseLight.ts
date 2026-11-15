@@ -6,6 +6,12 @@ import { useSyncExternalStore } from "react";
  * and when it clears, the grid's (hover or keyboard focus) shows again.
  */
 export type LightSource = "grid" | "scene";
+
+/**
+ * A lit value is a project slug, or "row:xr" / "row:software" for the first-screen links
+ * that light a whole row. Rows map to the case's rows A and B.
+ */
+export const ROW_LIGHTS: Record<string, "A" | "B"> = { "row:xr": "A", "row:software": "B" };
 export type LightState = { slug: string | null; source: LightSource | null };
 
 const slugs: Record<LightSource, string | null> = { grid: null, scene: null };
