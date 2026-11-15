@@ -41,11 +41,13 @@ void main() {
     vec3 poster = texture2D(uAtlas, st).rgb;
     base = mix(base, poster, uDim + (1.0 - uDim) * vLit);
   }
-  // The slot light: a strip along the top edge and a warm glow spilling down from it.
-  float strip = smoothstep(0.93, 1.0, vUv.y);
-  float d = distance(vUv, vec2(0.5, 1.08));
-  float glow = exp(-d * d * 3.5);
-  vec3 color = base * (0.7 + 0.3 * vLit) + uLight * vLit * (0.9 * strip + 0.5 * glow);
+  // The slot light: a bright strip along the top edge and a warm glow spilling down from
+  // it. Mixing towards the light (not adding) keeps it visible on a pale back in light mode.
+  float strip = smoothstep(0.84, 0.98, vUv.y);
+  float d = distance(vUv, vec2(0.5, 1.1));
+  float glow = exp(-d * d * 2.2);
+  float amount = vLit * clamp(0.95 * strip + 0.45 * glow, 0.0, 1.0);
+  vec3 color = mix(base * (0.7 + 0.3 * vLit), uLight, amount);
   gl_FragColor = vec4(color, 1.0);
   #include <colorspace_fragment>
 }
