@@ -1,26 +1,256 @@
 @import "tailwindcss";
 
+/*
+ * A sorting case at night: graphite structure, wood strips between the cells,
+ * and one warm light. The slot light is the only accent.
+ * Tokens are fixed by the design brief (section 4).
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  color-scheme: light dark;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --bg: #f1f2f4;
+  --text: #14161b;
+  --muted: #5a606b;
+  --line: #d6d9df;
+  --wood: #8a6a4a;
+  --slot: #ffb547;
+
+  /* Derived from the tokens above, not new colours. */
+  --slot-glow: rgb(255 181 71 / 0.3);
+  --slot-glow-soft: rgb(255 181 71 / 0.12);
+  /* Amber fails 3:1 against the light background, so light mode focuses in ink. */
+  --focus: var(--text);
+  --slot-label: var(--muted);
+  --slot-label-lit: var(--text);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --t-light: 150ms;
+
+  --step--1: 0.875rem;
+  --step-0: 1.0625rem;
+  --step-1: 1.25rem;
+  --step-2: 1.5625rem;
+  --step-3: 2rem;
+  --step-name: clamp(3rem, 10vw, 6.75rem);
+
+  --gutter: 1rem;
+  --frame: 76rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #0f1115;
+    --text: #eceef2;
+    --muted: #9aa1ad;
+    --line: #262a33;
+    --wood: #6e5238;
+
+    --slot-glow: rgb(255 181 71 / 0.2);
+    --slot-glow-soft: rgb(255 181 71 / 0.08);
+    --focus: var(--slot);
+    --slot-label-lit: var(--slot);
   }
 }
 
+@media (min-width: 768px) {
+  :root {
+    --gutter: 2rem;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-wood: var(--wood);
+  --color-slot: var(--slot);
+  --font-display: var(--font-familjen), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+/* ------------------------------------------------------------------ base */
+
+html {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  font-size: var(--step-0);
+  line-height: 1.55;
+  overflow-wrap: break-word;
+}
+
+main {
+  flex: 1;
+}
+
+a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  text-decoration-color: var(--muted);
+}
+
+a:hover {
+  text-decoration-color: currentColor;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 1px;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+.frame {
+  width: 100%;
+  max-width: var(--frame);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.prose {
+  max-width: 68ch;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--step--1);
+  letter-spacing: 0;
+}
+
+/* --------------------------------------------------------- skip, header */
+
+.skip-link {
+  position: absolute;
+  left: var(--gutter);
+  top: -100%;
+  z-index: 10;
+  padding: 0.5rem 0.75rem;
+  background: var(--text);
+  color: var(--bg);
+  text-decoration: none;
+}
+
+.skip-link:focus-visible {
+  top: 0.5rem;
+}
+
+.site-header {
+  border-bottom: 1px solid var(--line);
+}
+
+.site-header__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  padding-block: 1rem;
+}
+
+.site-header__name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--step-1);
+  text-decoration: none;
+}
+
+.site-header__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+}
+
+.site-header__nav a {
+  text-decoration: none;
+}
+
+.site-header__nav a:hover {
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------------------ footer */
+
+.site-footer {
+  margin-top: 5rem;
+  border-top: 1px solid var(--line);
+  padding-block: 2rem 3rem;
+}
+
+.site-footer__inner {
+  display: grid;
+  gap: 1rem;
+}
+
+.site-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+
+.site-footer__note {
+  color: var(--muted);
+  font-size: var(--step--1);
+}
+
+/* ------------------------------------------------------------ page heads */
+
+.page-head {
+  padding-block: 3rem 2rem;
+}
+
+.page-head h1 {
+  font-size: var(--step-3);
+}
+
+.section {
+  padding-block: 2.5rem;
+}
+
+.section > h2 {
+  font-size: var(--step-2);
+  margin-bottom: 1.25rem;
+}
+
+/* ---------------------------------------------------------- reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
 }
