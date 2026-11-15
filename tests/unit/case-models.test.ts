@@ -109,7 +109,7 @@ describe("phone AR models", () => {
 
     expect(json.extensionsUsed).toContain("KHR_materials_unlit");
     const posters = json.materials.map((m, i) => ({ m, i })).filter(({ m }) => m.name.startsWith("poster"));
-    expect(posters.length).toBe(5); // XR Dojo has no poster
+    expect(posters.length).toBe(6); // every project slot, XR Dojo included
     for (const { m, i } of posters) {
       expect(m.extensions?.KHR_materials_unlit, m.name).toBeDefined();
       const prim = json.meshes.flatMap((x) => x.primitives).find((p) => p.material === i)!;

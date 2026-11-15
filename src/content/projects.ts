@@ -148,6 +148,12 @@ export const projects: Project[] = [
     group: "xr",
     order: 3,
     result: { state: "role", role: "Software Engineer Intern", org: "XR Dojo", start: "2026-03" },
+    // A text-only poster (title, line, role) until Stephen sends captures of his soccer throw
+    // game. To swap: replace public/posters/xr-dojo.webp with a 720 by 405 frame, update the alt
+    // below, then rebuild what is made from the posters: npm run case:posters, case:models,
+    // vision:room and marker:card. The text version comes from scripts/posters/xr-dojo.json
+    // (node scripts/posters/make-text-poster.mjs xr-dojo).
+    poster: poster("xr-dojo", "Title card for XR Dojo: AR gameplay in Unity C# and a browser port in React Three Fiber."),
     // Company repos are private: no repo link, no Try link, no media of other people.
     links: [],
     caseStudy: {
