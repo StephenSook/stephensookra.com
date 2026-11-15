@@ -13,6 +13,12 @@ async function threeLoaded(page: Page) {
   return page.evaluate(() => (window as unknown as { __THREE__?: string }).__THREE__ ?? null);
 }
 
+/** Where only the poster shows, the stage is the poster's 16:9 box, not a tall letterbox. */
+async function expectPosterShape(page: Page) {
+  const box = (await page.locator(".case-stage").boundingBox())!;
+  expect(Math.abs(box.height - (box.width * 9) / 16)).toBeLessThanOrEqual(2);
+}
+
 /** Page pixel position of a slot's centre on the stage canvas. */
 async function slotPoint(page: Page, slug: string) {
   const box = (await page.locator(".case-stage canvas").boundingBox())!;
@@ -97,6 +103,14 @@ test.describe("desktop", () => {
     await context.close();
   });
 
+  test("with reduced motion the case page's stage keeps the poster's shape", async ({ browser }) => {
+    const context = await browser.newContext({ ...DESKTOP, reducedMotion: "reduce" });
+    const page = await context.newPage();
+    await page.goto("/case");
+    await expectPosterShape(page);
+    await context.close();
+  });
+
   test("with WebGL off the poster stays, three.js never loads, and nothing errors", async ({ browser }) => {
     const context = await browser.newContext(DESKTOP);
     await context.addInitScript(NO_WEBGL_SCRIPT);
@@ -124,6 +138,14 @@ test("on a phone the poster shows and three.js never loads", async ({ browser })
   await expect(page.locator(".case-stage canvas")).toHaveCount(0);
   await expect(page.locator(".case-poster img")).toBeVisible();
   expect(await threeLoaded(page)).toBeNull();
+  await context.close();
+});
+
+test("on a phone the case page's stage is the poster's shape, with no empty bands", async ({ browser }) => {
+  const context = await browser.newContext(PHONE);
+  const page = await context.newPage();
+  await page.goto("/case");
+  await expectPosterShape(page);
   await context.close();
 });
 

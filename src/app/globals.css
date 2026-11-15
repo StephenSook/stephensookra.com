@@ -307,10 +307,14 @@ p {
   margin-bottom: 1.5rem;
 }
 
-.case-stage--full {
-  aspect-ratio: auto;
-  height: calc(100dvh - 9rem);
-  min-height: 22rem;
+/* Full height only where the scene can load (the queries in src/scene/gate.ts). Everywhere
+   else the stage shows the 16:9 poster, so it keeps the poster's shape. */
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .case-stage--full {
+    aspect-ratio: auto;
+    height: calc(100dvh - 9rem);
+    min-height: 22rem;
+  }
 }
 
 .case-stage__poster,
