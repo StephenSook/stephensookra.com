@@ -440,8 +440,10 @@ p {
   color: var(--muted);
 }
 
-/* A lit slot: a strip of light along the top edge and a glow spilling down. */
+/* A lit slot: a strip of light along the top edge and a glow spilling down.
+   data-lit is set when the 3D case lights this project's slot. */
 .slot:hover,
+.slot[data-lit],
 .slot:has(.slot__link:focus-visible),
 body:has(a[data-light="xr"]:is(:hover, :focus-visible)) [data-row="xr"] .slot,
 body:has(a[data-light="software"]:is(:hover, :focus-visible)) [data-row="software"] .slot {
@@ -450,6 +452,7 @@ body:has(a[data-light="software"]:is(:hover, :focus-visible)) [data-row="softwar
 }
 
 .slot:hover .slot__label,
+.slot[data-lit] .slot__label,
 .slot:has(.slot__link:focus-visible) .slot__label,
 body:has(a[data-light="xr"]:is(:hover, :focus-visible)) [data-row="xr"] .slot__label,
 body:has(a[data-light="software"]:is(:hover, :focus-visible)) [data-row="software"] .slot__label {

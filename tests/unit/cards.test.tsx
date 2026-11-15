@@ -185,6 +185,11 @@ describe("ProjectRow poster loading", () => {
     expect(imgs[1]).toHaveAttribute("fetchpriority", "high");
   });
 
+  it("carries its slug so the case can light it", () => {
+    const { container } = render(<ProjectCard project={projectBySlug("instanter")!} slotLabel="B2" />);
+    expect(container.querySelector("article")).toHaveAttribute("data-slug", "instanter");
+  });
+
   it("renders XR Dojo without an image or an outside link", () => {
     render(<ProjectCard project={projectBySlug("xr-dojo")!} slotLabel="A3" />);
     expect(screen.queryByRole("img")).toBeNull();

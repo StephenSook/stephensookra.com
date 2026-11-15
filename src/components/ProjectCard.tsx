@@ -30,7 +30,7 @@ export function ProjectCard({ project, slotLabel, status, posterLoad = "lazy" }:
         ? ({ loading: "eager", fetchPriority: "high" } as const)
         : ({ loading: "lazy" } as const);
   return (
-    <article className="slot" data-slot={slotLabel}>
+    <article className="slot" data-slot={slotLabel} data-slug={project.slug}>
       <span className="slot__label mono" aria-hidden="true">
         {slotLabel}
       </span>
