@@ -5,18 +5,30 @@ import { projects } from "@/content";
 import { evaluateFilm, evaluateRepo, evaluateTry, type Verdict } from "@/lib/linkcheck";
 
 const TIMEOUT_MS = 90_000; // Render free services can take over a minute to wake up.
+const ATTEMPTS = 3;
+const RETRY_WAIT_MS = 30_000;
+// A sleeping Render service can answer 502, 503 or 504 while it boots (Throughline's
+// API returns 503 until its startup reconciliation finishes). Retry those; a service
+// that is still down after three tries fails the check.
+const WAKING = new Set([502, 503, 504]);
 const UA = "stephensookra.com link check (+https://github.com/StephenSook/stephensookra.com)";
 
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function get(url: string, headers: Record<string, string> = {}) {
+  let last: { status: number; body: string } | undefined;
   let lastError: unknown;
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+    if (attempt > 1) await wait(RETRY_WAIT_MS);
     try {
       const res = await fetch(url, { headers: { "user-agent": UA, ...headers }, signal: AbortSignal.timeout(TIMEOUT_MS) });
-      return { status: res.status, body: await res.text() };
+      last = { status: res.status, body: await res.text() };
+      if (!WAKING.has(res.status)) return last;
     } catch (error) {
       lastError = error;
     }
   }
+  if (last) return last;
   throw new Error(`${url}: ${(lastError as Error).message}`);
 }
 

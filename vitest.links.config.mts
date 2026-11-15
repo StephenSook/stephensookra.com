@@ -9,7 +9,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/links/**/*.test.ts"],
-    testTimeout: 200_000,
+    // Up to three tries of 90 s with 30 s between, for the core route and the home page.
+    testTimeout: 720_000,
     maxConcurrency: 4,
   },
 });
