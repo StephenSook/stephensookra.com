@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { zipEntries } from "./usdz";
 
 /*
  * The case as files for phone AR (Scene Viewer on Android, AR Quick Look on iPhone).
@@ -53,21 +54,6 @@ function imageSize(bytes: Buffer): { width: number; height: number } {
 }
 
 /** The local file entries of a zip, in order, with where each one's data starts. */
-function zipEntries(path: string): { name: string; dataOffset: number; size: number }[] {
-  const b = readFileSync(path);
-  const entries: { name: string; dataOffset: number; size: number }[] = [];
-  for (let at = 0; b.readUInt32LE(at) === 0x04034b50; ) {
-    const size = b.readUInt32LE(at + 18);
-    const nameLength = b.readUInt16LE(at + 26);
-    const extraLength = b.readUInt16LE(at + 28);
-    const name = b.toString("utf8", at + 30, at + 30 + nameLength);
-    const dataOffset = at + 30 + nameLength + extraLength;
-    entries.push({ name, dataOffset, size });
-    at = dataOffset + size;
-  }
-  return entries;
-}
-
 describe("phone AR models", () => {
   it("were exported from the current case model", () => {
     expect(existsSync(manifestPath)).toBe(true);

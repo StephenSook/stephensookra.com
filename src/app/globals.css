@@ -539,6 +539,52 @@ p {
   outline-offset: 3px;
 }
 
+/* ------------------------------------------------- the Vision Pro room (/vision) */
+
+.vision-room {
+  display: grid;
+  gap: 0.75rem;
+  margin-block: 1.5rem 0.75rem;
+}
+
+.vision-room__button {
+  justify-self: start;
+  min-height: 2.75rem;
+  padding: 0 1.25rem;
+  border-radius: 0.25rem;
+  background: var(--slot);
+  color: #14161b;
+  font: 600 var(--step-0) / 1 var(--font-sans);
+  cursor: pointer;
+}
+
+.vision-room__button:disabled {
+  cursor: progress;
+  opacity: 0.75;
+}
+
+.vision-room__status {
+  font-weight: 600;
+}
+
+.vision-room__status:empty {
+  display: none;
+}
+
+.vision-room__elsewhere {
+  margin-block: 1.5rem 0.75rem;
+}
+
+.vision-page__note {
+  color: var(--muted);
+  font-size: var(--step--1);
+}
+
+.vision-page__vr {
+  margin-block: 2.5rem 1rem;
+  font: 600 var(--step-2) / 1.2 var(--font-display);
+}
+
 /* --------------------------------------------- the marker card (/ar/marker/card) */
 
 .marker-card__downloads {

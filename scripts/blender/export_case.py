@@ -96,26 +96,25 @@ def emissive_image(name, path):
     return mat
 
 
-def main():
-    a = args()
-    data = json.loads(Path(a.layout).read_text())
+def build_case(layout_path, posters_dir):
+    """Builds the case in the open scene: bottom centre at the origin, front facing -Y (the
+    viewer; glTF and USD +Z). Returns the objects and both material sets."""
+    data = json.loads(Path(layout_path).read_text())
     layout, colors = data["layout"], data["colors"]
     lift = layout["height"] / 2  # origin at the bottom centre
-
-    bpy.ops.wm.read_factory_settings(use_empty=True)
 
     wood = principled("case-wood", hex_rgba(colors["wood"]), 0.55, specular=0.06)
     backs_glb = unlit_color("case-backs", scaled(hex_rgba(colors["back"]), UNLIT))
     backs_usd = principled("case-backs-lit", scaled(hex_rgba(colors["back"]), UNLIT), 1.0, specular=0.0)
 
-    join([place_box(b, lift, f"w{i}") for i, b in enumerate(layout["frame"] + layout["dividers"])], "case-wood", wood)
+    wood_obj = join([place_box(b, lift, f"w{i}") for i, b in enumerate(layout["frame"] + layout["dividers"])], "case-wood", wood)
     backs = [place_box(b, lift, f"b{i}") for i, b in enumerate(layout["smallBacks"])]
     backs += [place_box(s["back"], lift, f"s{i}") for i, s in enumerate(layout["projectSlots"])]
     backs_obj = join(backs, "case-backs", backs_glb)
 
     posters = []  # (object, glb material, usd material)
     for slot in layout["projectSlots"]:
-        path = Path(a.posters) / f"{slot['slug']}.jpg"
+        path = Path(posters_dir) / f"{slot['slug']}.jpg"
         if not path.exists():
             continue  # XR Dojo has no poster: its slot keeps the plain back
         b = slot["back"]
@@ -130,6 +129,20 @@ def main():
         usd_mat = emissive_image(f"poster-{slot['slug']}-emissive", path)
         obj.data.materials.append(glb_mat)
         posters.append((obj, glb_mat, usd_mat))
+    return {"layout": layout, "wood": wood_obj, "backs": backs_obj, "backs_usd": backs_usd, "posters": posters}
+
+
+def use_usd_materials(case):
+    """USD has no unlit material: swap in the emissive posters and the lit backs."""
+    case["backs"].data.materials[0] = case["backs_usd"]
+    for obj, _glb, usd in case["posters"]:
+        obj.data.materials[0] = usd
+
+
+def main():
+    a = args()
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    case = build_case(a.layout, a.posters)
 
     bpy.ops.export_scene.gltf(
         filepath=str(Path(a.glb).resolve()),
@@ -139,10 +152,7 @@ def main():
         export_image_quality=85,
     )
 
-    # USD has no unlit material: swap in the emissive and lit versions, then export.
-    backs_obj.data.materials[0] = backs_usd
-    for obj, _glb, usd in posters:
-        obj.data.materials[0] = usd
+    use_usd_materials(case)
     bpy.ops.wm.usd_export(
         filepath=str(Path(a.usdz).resolve()),
         export_materials=True,

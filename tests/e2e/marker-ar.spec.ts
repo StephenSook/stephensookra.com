@@ -192,4 +192,5 @@ test("the card page offers the card as a PDF and a PNG that both download", asyn
   expect(png.headers()["content-type"]).toBe("image/png");
   const target = await request.get(marker.target.imagePath);
   expect(target.status()).toBe(200);
+  for (const res of [pdf, png, target]) expect(res.headers()["cache-control"]).toContain("immutable");
 });

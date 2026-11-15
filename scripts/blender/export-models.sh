@@ -22,20 +22,7 @@ if [ "$LAYOUT_SHA" != "$SPEC_SHA" ]; then
   exit 1
 fi
 
-# Each project poster, cropped to its slot's shape (cover) as a JPEG of 1024 px or less.
-mkdir -p "$WORK/posters"
-python3 - "$LAYOUT" <<'PY' > "$WORK/crops.txt"
-import json, sys
-data = json.load(open(sys.argv[1]))
-for slot in data["layout"]["projectSlots"]:
-    b = slot["back"]
-    print(slot["slug"], round(720 * b["h"] / b["w"]))
-PY
-while read -r slug height; do
-  src="public/posters/$slug.webp"
-  [ -f "$src" ] || continue
-  magick "$src" -resize "720x${height}^" -gravity center -extent "720x${height}" -quality 85 "$WORK/posters/$slug.jpg"
-done < "$WORK/crops.txt"
+sh scripts/blender/crop-posters.sh "$LAYOUT" "$WORK/posters"
 
 "$BLENDER" -b --factory-startup --python-exit-code 1 -P scripts/blender/export_case.py -- \
   --layout "$LAYOUT" --posters "$WORK/posters" --glb "$WORK/case.glb" --usdz "$WORK/case.usdz" \

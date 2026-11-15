@@ -20,7 +20,8 @@
     "case:models": "npm run case:layout && sh scripts/blender/export-models.sh",
     "vendor:model-viewer": "sh scripts/vendor/model-viewer.sh",
     "vendor:8thwall": "sh scripts/vendor/8thwall.sh",
-    "marker:card": "node scripts/marker/make-card.mjs"
+    "marker:card": "node scripts/marker/make-card.mjs",
+    "vision:room": "npm run case:layout && sh scripts/blender/export-room.sh"
   },
   "dependencies": {
     "@react-three/fiber": "9.8.2",

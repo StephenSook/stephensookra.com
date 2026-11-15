@@ -17,5 +17,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/case/ar`, priority: 0.4 },
     { url: `${SITE_URL}/ar/marker`, priority: 0.4 },
     { url: `${SITE_URL}/ar/marker/card`, priority: 0.3 },
+    { url: `${SITE_URL}/vision`, priority: 0.4 },
   ];
 }

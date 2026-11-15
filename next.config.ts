@@ -23,6 +23,11 @@ const nextConfig: NextConfig = {
       // model/vnd.usdz+zip. Each generation has its own folder, so the files never change.
       { source: "/ar/:gen/case.usdz", headers: [{ key: "Content-Type", value: "model/vnd.usdz+zip" }, IMMUTABLE] },
       { source: "/ar/:gen/case.glb", headers: [{ key: "Content-Type", value: "model/gltf-binary" }, IMMUTABLE] },
+      // The Vision Pro room and its light (npm run vision:room), one folder per generation.
+      { source: "/vision/:gen/room.usdz", headers: [{ key: "Content-Type", value: "model/vnd.usdz+zip" }, IMMUTABLE] },
+      { source: "/vision/:gen/room.hdr", headers: [{ key: "Content-Type", value: "image/vnd.radiance" }, IMMUTABLE] },
+      // The marker card and its target (npm run marker:card), one folder per generation.
+      { source: "/marker/:gen/:file", headers: [IMMUTABLE] },
       // Vendored builds sit in versioned folders (scripts/vendor).
       { source: "/vendor/:path*", headers: [IMMUTABLE] },
     ];

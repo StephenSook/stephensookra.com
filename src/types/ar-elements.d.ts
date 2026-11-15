@@ -23,3 +23,13 @@ declare module "react" {
     }
   }
 }
+
+// visionOS 27 Safari: immersive website environments (WWDC26 session 320), modelled on the
+// Fullscreen API. Optional, so code must check before calling.
+declare global {
+  interface Document {
+    immersiveEnabled?: boolean;
+    immersiveElement?: Element | null;
+    exitImmersive?: () => Promise<void>;
+  }
+}
