@@ -19,6 +19,11 @@ export type CaseSpec = {
   projectRowHeight: number;
   rows: string[];
   slots: Record<string, string[]>;
+  /**
+   * The case is one dark piece of furniture in both colour schemes; only the page around
+   * it changes. The scene and the Blender posters both read these.
+   */
+  colors: { wood: string; back: string };
 };
 
 export type SlotLayout = {

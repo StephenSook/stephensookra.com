@@ -25,6 +25,7 @@ const out = {
   specSha256: createHash("sha256").update(specText).digest("hex"),
   aspect: ASPECT,
   camera: { fovDegrees: CASE_FOV, position: camera.position.toArray() },
+  colors: spec.colors,
   layout,
   posters: projects,
 };
