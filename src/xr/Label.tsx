@@ -8,14 +8,14 @@ export const FONT_SEMIBOLD = "/xr/fonts/familjen-grotesk-latin-600-normal.woff";
 
 export type LabelProps = {
   text: string;
-  /** Font size in metres. */
+  /** Font size in meters. */
   size: number;
   position: [number, number, number];
   color?: string;
   font?: string;
   anchorX?: "left" | "center" | "right";
   anchorY?: "top" | "middle" | "bottom";
-  /** Wraps lines at this width, in metres. */
+  /** Wraps lines at this width, in meters. */
   maxWidth?: number;
   lineHeight?: number;
 };

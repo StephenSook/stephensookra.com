@@ -179,10 +179,12 @@ describe("ProjectRow poster loading", () => {
     const projects = ["case-light", "glare-zone", "xr-dojo"].map((s) => projectBySlug(s)!);
     render(<ProjectRow id="xr" letter="A" heading="XR work" projects={projects} eagerPosters />);
     const imgs = screen.getAllByRole("img");
-    expect(imgs).toHaveLength(2);
+    expect(imgs).toHaveLength(3); // XR Dojo's text-only poster included
     expect(imgs[0]).not.toHaveAttribute("loading", "lazy");
-    expect(imgs[1]).toHaveAttribute("loading", "eager");
-    expect(imgs[1]).toHaveAttribute("fetchpriority", "high");
+    for (const img of imgs.slice(1)) {
+      expect(img).toHaveAttribute("loading", "eager");
+      expect(img).toHaveAttribute("fetchpriority", "high");
+    }
   });
 
   it("carries its slug so the case can light it", () => {
@@ -190,9 +192,9 @@ describe("ProjectRow poster loading", () => {
     expect(container.querySelector("article")).toHaveAttribute("data-slug", "instanter");
   });
 
-  it("renders XR Dojo without an image or an outside link", () => {
+  it("renders XR Dojo with its text-only poster and no outside link", () => {
     render(<ProjectCard project={projectBySlug("xr-dojo")!} slotLabel="A3" />);
-    expect(screen.queryByRole("img")).toBeNull();
+    expect(screen.getByRole("img")).toHaveAccessibleName(/^Title card for XR Dojo/);
     const links = screen.getAllByRole("link");
     expect(links).toHaveLength(1);
     expect(links[0]).toHaveAttribute("href", "/work/xr-dojo");

@@ -7,7 +7,7 @@ import arManifest from "../../../../public/ar/manifest.json";
 
 export const metadata: Metadata = {
   title: "The case in your room",
-  description: "Put the lit letter case in your room at full size, 1.6 metres wide, from a phone.",
+  description: "Put the lit letter case in your room at full size, 1.6 meters wide, from a phone.",
   alternates: { canonical: "/case/ar" },
 };
 
@@ -17,7 +17,7 @@ export default function CaseArPage() {
       <h1>The case in your room</h1>
       {/* DRAFT copy, awaiting Stephen's sign-off. */}
       <p className="prose muted">
-        On a phone, put the case in your room at full size: 1.6 metres wide, as it would hang on a wall.
+        On a phone, put the case in your room at full size: 1.6 meters wide, as it would hang on a wall.
       </p>
       <PhoneAr
         glb={arManifest.glb}

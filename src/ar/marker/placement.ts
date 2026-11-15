@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import spec from "@/scene/case-spec.json";
 
-/** The case model's size in metres; its origin is the bottom centre, its depth centred on z = 0. */
+/** The case model's size in meters; its origin is the bottom centre, its depth centred on z = 0. */
 export const CASE_SIZE = { width: spec.width, height: spec.height, depth: spec.depth };
 
 type Vec3 = { x: number; y: number; z: number };

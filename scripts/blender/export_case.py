@@ -8,7 +8,7 @@ Usage (headless):
 
 The case is real size (1.6 x 1.0 x 0.14 m), its front faces the viewer (+Z in glTF), and its
 origin is the bottom centre, so it stands on a floor or table where AR puts it. Layout
-coordinates are metres, y up, z towards the viewer; Blender is z up, so (x, y, z) becomes
+coordinates are meters, y up, z towards the viewer; Blender is z up, so (x, y, z) becomes
 (x, -z, y + height / 2).
 """
 
@@ -116,7 +116,7 @@ def build_case(layout_path, posters_dir):
     for slot in layout["projectSlots"]:
         path = Path(posters_dir) / f"{slot['slug']}.jpg"
         if not path.exists():
-            continue  # XR Dojo has no poster: its slot keeps the plain back
+            continue  # a slot without a poster keeps the plain back
         b = slot["back"]
         y_front = -(b["z"] + b["d"] / 2) - 1e-4
         bpy.ops.mesh.primitive_plane_add(size=1, location=(b["x"], y_front, b["y"] + lift))

@@ -20,8 +20,19 @@ describe("pointing", () => {
     expect(el.dataset.pointing).toBe("");
   });
 
+  it("says where the pulled card is: out, moving or in, so a test can wait for the card, not a clock", () => {
+    const el = document.createElement("div");
+    const p = createPointing(el);
+    p.card("moving");
+    expect(el.dataset.card).toBe("moving");
+    p.card("out");
+    expect(el.dataset.card).toBe("out");
+    p.card("in");
+    expect(el.dataset.card).toBe("in");
+  });
+
   it("does nothing without an element", () => {
     const p = createPointing(null);
-    expect(() => (p.over("card"), p.out("card"))).not.toThrow();
+    expect(() => (p.over("card"), p.out("card"), p.card("out"))).not.toThrow();
   });
 });

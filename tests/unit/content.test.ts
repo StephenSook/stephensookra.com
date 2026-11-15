@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -12,6 +12,7 @@ import {
   projects,
   proofLine,
 } from "@/content";
+import { resultText } from "@/components/ResultLine";
 import { projectSchema, awardSchema } from "@/content/schema";
 
 const PRIVATE_REPOS = [
@@ -121,6 +122,19 @@ describe("project schema and card rules", () => {
         const origin = new URL(link.url).origin;
         expect(link.check!.url.replace(/\/$/, ""), p.slug).not.toBe(origin);
       }
+  });
+
+  it("every featured project has a poster, so no slot of the case is an empty box", () => {
+    expect(featured.filter((p) => !p.poster).map((p) => p.slug)).toEqual([]);
+  });
+
+  it("the text-only XR Dojo poster says what projects.ts says", () => {
+    const text = JSON.parse(readFileSync(join(process.cwd(), "scripts/posters/xr-dojo.json"), "utf8"));
+    const dojo = projects.find((p) => p.slug === "xr-dojo")!;
+    expect(text.title).toBe(dojo.title);
+    expect(text.line).toBe(dojo.line);
+    expect(text.role).toBe(resultText(dojo.result).lead); // the site's own role line, word for word
+    expect(dojo.poster?.src).toBe("/posters/xr-dojo.webp");
   });
 
   it("every poster file exists in public and has alt text", () => {

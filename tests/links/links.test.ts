@@ -2,35 +2,32 @@
 // Try links must pass their core-path check; repos must be public; films must be public.
 import { describe, expect, it } from "vitest";
 import { projects } from "@/content";
-import { evaluateFilm, evaluateRepo, evaluateTry, type Verdict } from "@/lib/linkcheck";
+import { evaluateFilm, evaluateRepo, evaluateTry, fetchWaking, type Verdict } from "@/lib/linkcheck";
 
-const TIMEOUT_MS = 90_000; // Render free services can take over a minute to wake up.
-const ATTEMPTS = 3;
-const RETRY_WAIT_MS = 30_000;
-// A sleeping Render service can answer 502, 503 or 504 while it boots (Throughline's
-// API returns 503 until its startup reconciliation finishes). Retry those; a service
-// that is still down after three tries fails the check.
-const WAKING = new Set([502, 503, 504]);
+const TIMEOUT_MS = 90_000; // a booting Render service can hold a request for most of a minute
+const NETWORK_TRIES = 3;
+const NETWORK_WAIT_MS = 10_000;
 const UA = "stephensookra.com link check (+https://github.com/StephenSook/stephensookra.com)";
 
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-async function get(url: string, headers: Record<string, string> = {}) {
-  let last: { status: number; body: string } | undefined;
+/** One request, retried only when the network itself fails. */
+async function fetchOnce(url: string, headers: Record<string, string> = {}) {
   let lastError: unknown;
-  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
-    if (attempt > 1) await wait(RETRY_WAIT_MS);
+  for (let attempt = 1; attempt <= NETWORK_TRIES; attempt++) {
+    if (attempt > 1) await wait(NETWORK_WAIT_MS);
     try {
       const res = await fetch(url, { headers: { "user-agent": UA, ...headers }, signal: AbortSignal.timeout(TIMEOUT_MS) });
-      last = { status: res.status, body: await res.text() };
-      if (!WAKING.has(res.status)) return last;
+      return { status: res.status, body: await res.text() };
     } catch (error) {
       lastError = error;
     }
   }
-  if (last) return last;
   throw new Error(`${url}: ${(lastError as Error).message}`);
 }
+
+/** Wake, then check: a sleeping Render host gets about 90 s to boot (src/lib/linkcheck.ts). */
+const get = (url: string, headers: Record<string, string> = {}) => fetchWaking(url, (u) => fetchOnce(u, headers), wait);
 
 function expectOk(verdict: Verdict, what: string) {
   expect(verdict.ok, `${what}: ${verdict.reason}`).toBe(true);

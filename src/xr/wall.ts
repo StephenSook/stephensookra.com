@@ -2,7 +2,7 @@ import * as THREE from "three";
 
 /** A hit whose surface normal tips further than this from level is not a wall (|normal.y|). */
 export const WALL_MAX_TILT = 0.3;
-/** The case's bottom stays at least this far off the floor, in metres. */
+/** The case's bottom stays at least this far off the floor, in meters. */
 export const MIN_BOTTOM = 0.05;
 
 export type WallHit = { position: THREE.Vector3; normal: THREE.Vector3 };
@@ -37,7 +37,7 @@ export function wallPlacement(
 /** While looking for a wall, a hint stays this far ahead of the eyes and this far below them. */
 export const HINT_AHEAD = 0.8;
 export const HINT_BELOW = 0.12;
-/** The hint's Exit button, in the hint's own space (metres). */
+/** The hint's Exit button, in the hint's own space (meters). */
 export const HINT_EXIT = { w: 0.22, h: 0.08, y: -0.1 };
-/** The outline that previews the case on the wall: bar thickness, in metres. */
+/** The outline that previews the case on the wall: bar thickness, in meters. */
 export const OUTLINE_BAR = 0.012;

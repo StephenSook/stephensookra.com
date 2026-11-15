@@ -22,7 +22,7 @@ type Support = "checking" | "quicklook" | "quicklook-model" | "viewer";
 
 const noSubscription = () => () => {};
 
-const ALT = "Stephen Sookra's lit letter case, 1.6 metres wide, with six projects in its slots.";
+const ALT = "Stephen Sookra's lit letter case, 1.6 meters wide, with six projects in its slots.";
 
 /**
  * The case in the reader's room at real size. An iPhone gets a plain AR Quick Look link (no

@@ -1,9 +1,9 @@
 import * as THREE from "three";
 import type { CaseLayout } from "@/scene/layout";
 
-/** How far in front of the viewer the case stands, in metres (design brief section 9). */
+/** How far in front of the viewer the case stands, in meters (design brief section 9). */
 export const CASE_DISTANCE = 1;
-/** The case's centre sits this far below the viewer's eyes, in metres. */
+/** The case's centre sits this far below the viewer's eyes, in meters. */
 export const BELOW_EYE = 0.1;
 
 export type HeadPose = { position: THREE.Vector3; quaternion: THREE.Quaternion };

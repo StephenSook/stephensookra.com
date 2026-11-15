@@ -195,8 +195,19 @@ const videos = (page: Page) =>
     })),
   );
 
+/** Waits for the pulled card to finish sliding out (data-card, from the session), not a clock. */
+const cardOut = (page: Page) => expect(page.locator(".xr-session")).toHaveAttribute("data-card", "out");
+
+/**
+ * The emulated headset draws into the page's own canvas at the window's size, and a CI runner
+ * has no GPU, so every frame is drawn in software. 1024 by 576 is the smallest window that
+ * still loads the page's 3D case (1024 px wide) and costs half the pixels of 1280 by 900. The
+ * tests aim by 3D rays, so the window size changes no result.
+ */
+const HEADSET_WINDOW = { width: 1024, height: 576 };
+
 async function questPage(browser: Browser, input: Input, install = INSTALL) {
-  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const context = await browser.newContext({ viewport: HEADSET_WINDOW });
   await context.addInitScript({ content: COUNT_VIDEOS });
   await context.addInitScript({ content: install });
   if (input === "hand")
@@ -244,7 +255,7 @@ for (const input of ["controller", "hand"] as const) {
 
     // The open card blocks the slots behind it: this ray, through the card's centre, lands on
     // the card (it would otherwise go on into A2), and selecting there changes nothing.
-    await page.waitForTimeout(600); // the card finishes sliding out
+    await cardOut(page);
     await aim(page, input, CARD);
     await select(page, input);
     await expect(status).toHaveText("Instanter card open");
@@ -263,13 +274,13 @@ for (const input of ["controller", "hand"] as const) {
     expect(path, `the closed card caught the pointer: ${path.join(" > ")}`).not.toContain("card");
     await select(page, input);
     await expect(status).toHaveText("Instanter card open");
-    await page.waitForTimeout(600);
+    await cardOut(page);
     await selectUntil(page, input, CLOSE_BUTTON, "In VR");
 
     // Pull Aloud, then Case Light (reaching past the open card): one video, switched.
     await selectUntil(page, input, slot("aloud"), "Aloud card open");
     await expect.poll(() => videos(page)).toEqual([{ src: "/loops/aloud.mp4", playing: true }]);
-    await page.waitForTimeout(600);
+    await cardOut(page);
     await selectUntil(page, input, slot("case-light"), "Case Light card open", LEFT);
     await expect.poll(() => videos(page)).toEqual([{ src: "/loops/case-light.mp4", playing: true }]);
 
@@ -421,10 +432,10 @@ test("in an emulated Quest 3 in an office: look at a wall, hang the case there, 
 
   // The slots are where the maths puts them: on the wall the headset faces, facing back.
   await selectUntil(page, "controller", wallSlot("instanter"), "Instanter card open", RIGHT_TURNED);
-  await page.waitForTimeout(600); // the card finishes sliding out
+  await cardOut(page);
   await selectUntil(page, "controller", WALL_CLOSE, "On your wall", RIGHT_TURNED);
 
-  // The reader walks half a metre to the side and closer: the case stays on the wall.
+  // The reader walks half a meter to the side and closer: the case stays on the wall.
   const step = new THREE.Vector3(0.5, 0, 0.4);
   await page.evaluate(([x, z]) => {
     const device = (window as unknown as { __xrDevice: { position: { set(x: number, y: number, z: number): void } } })
@@ -433,7 +444,7 @@ test("in an emulated Quest 3 in an office: look at a wall, hang the case there, 
   }, [step.x, step.z]);
   const moved = RIGHT_TURNED.clone().add(step);
   await selectUntil(page, "controller", wallSlot("aloud"), "Aloud card open", moved);
-  await page.waitForTimeout(600);
+  await cardOut(page);
   await selectUntil(page, "controller", WALL_CLOSE, "On your wall", moved);
   await selectUntil(page, "controller", WALL_EXIT, "Left passthrough", moved);
   await expect(place).toBeFocused();

@@ -33,7 +33,7 @@ for f in case.glb case.usdz; do
     exit 1
   fi
 done
-# AR Quick Look: Apple's own ARKit check, and the stage must be y-up, metres, with the case
+# AR Quick Look: Apple's own ARKit check, and the stage must be y-up, meters, with the case
 # turned upright (Blender is z-up). These tools ship with macOS, where this script runs.
 usdchecker --arkit "$WORK/case.usdz" > "$WORK/usdchecker.log" 2>&1 || {
   echo "case.usdz fails usdchecker --arkit; see $WORK/usdchecker.log" >&2
