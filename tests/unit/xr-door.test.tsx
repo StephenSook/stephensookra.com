@@ -34,14 +34,13 @@ describe("XrDoor", () => {
     expect(screen.queryByRole("button", { name: "Enter VR" })).toBeNull();
   });
 
-  it("shows no door on a phone without VR", async () => {
-    const { container } = render(
-      <XrDoorView checkSupport={async () => false} isLaptop={() => false} pageUrl={() => PAGE} note={NOTE} />,
-    );
+  it("offers a phone without VR the case in its room (phone AR), not the headset door", async () => {
+    render(<XrDoorView checkSupport={async () => false} isLaptop={() => false} pageUrl={() => PAGE} note={NOTE} />);
     await flush();
     expect(screen.queryByRole("button")).toBeNull();
-    expect(screen.queryByRole("link")).toBeNull();
-    expect(container.querySelector(".xr-door")?.textContent).toBe("");
+    expect(screen.getByRole("link", { name: "See it in your room" })).toHaveAttribute("href", "/case/ar");
+    expect(screen.queryByRole("link", { name: "Open on Meta Quest" })).toBeNull();
+    expect(screen.queryByText(NOTE)).toBeNull(); // the headset note belongs to the headset door
   });
 
   it("keeps Enter VR hidden until the session can be loaded", async () => {

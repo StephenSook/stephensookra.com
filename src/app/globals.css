@@ -384,8 +384,58 @@ p {
   cursor: pointer;
 }
 
-.xr-door__launch {
+.xr-door__launch,
+.xr-door__phone {
   font-weight: 600;
+}
+
+/* ------------------------------------------------------- phone AR (/case/ar) */
+
+.phone-ar {
+  display: grid;
+  gap: 0.75rem;
+  margin-block: 1.5rem;
+}
+
+/* The poster, the <model> and the viewer share one 16:9 box, so swapping them shifts nothing. */
+.phone-ar__poster,
+.phone-ar__model,
+.phone-ar__viewer {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+
+.phone-ar__quicklook {
+  display: block;
+}
+
+.phone-ar__open {
+  justify-self: start;
+  min-height: 2.75rem;
+  padding: 0 1.25rem;
+  border-radius: 0.25rem;
+  background: var(--slot);
+  color: #14161b;
+  font: 600 var(--step-0) / 1 var(--font-sans);
+  cursor: pointer;
+}
+
+.phone-ar__open:disabled {
+  cursor: progress;
+  opacity: 0.75;
+}
+
+.phone-ar__hint,
+.phone-ar__note,
+.phone-ar__status {
+  color: var(--muted);
+  font-size: var(--step--1);
+}
+
+.phone-ar__status:empty {
+  display: none;
 }
 
 .xr-door__note {

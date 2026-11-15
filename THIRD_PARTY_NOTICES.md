@@ -35,6 +35,16 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
 OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
+## model-viewer (phone AR viewer)
+
+- Package: @google/model-viewer 4.4.0 (npm), from https://github.com/google/model-viewer
+- Files: `public/vendor/model-viewer/4.4.0/model-viewer.min.js` (the package's `dist/model-viewer.min.js`,
+  unmodified; its SHA-256 and the tarball integrity are in `source.json` beside it)
+- Used for: showing the case in 3D on /case/ar and handing it to Scene Viewer or WebXR; it loads only after a tap
+- Licence: Apache License 2.0, full text in `public/vendor/model-viewer/4.4.0/LICENSE`. The build bundles three.js
+  (MIT, Copyright 2010-2026 Three.js Authors) and Lit (BSD-3-Clause, Copyright Google LLC); their licence notices
+  are kept in the file's own comments.
+
 ## Familjen Grotesk (headset labels)
 
 - Package: @fontsource/familjen-grotesk 5.3.0 (npm), from https://github.com/Familjen-Sthlm/Familjen-Grotesk

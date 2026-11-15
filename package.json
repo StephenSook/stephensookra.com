@@ -17,7 +17,8 @@
     "case:layout": "node scripts/export-case-layout.mjs",
     "case:posters": "npm run case:layout && sh scripts/blender/render-posters.sh",
     "loops": "sh scripts/loops/cut-loops.sh",
-    "case:models": "npm run case:layout && sh scripts/blender/export-models.sh"
+    "case:models": "npm run case:layout && sh scripts/blender/export-models.sh",
+    "vendor:model-viewer": "sh scripts/vendor/model-viewer.sh"
   },
   "dependencies": {
     "@react-three/fiber": "9.8.2",

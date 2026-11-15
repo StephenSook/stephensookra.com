@@ -27,13 +27,18 @@ test.describe("the headset door without a headset", () => {
   }
 });
 
-test("a phone gets no headset door", async ({ browser }) => {
+test("a phone gets no headset door, only a link to see the case in its room", async ({ browser }) => {
   const context = await browser.newContext(PHONE);
   const page = await context.newPage();
   await page.goto("/case");
   await page.waitForLoadState("networkidle");
-  await expect(page.locator(".xr-door")).toHaveText("");
+  await expect(page.locator(".xr-door").getByRole("link", { name: "See it in your room" })).toHaveAttribute(
+    "href",
+    "/case/ar",
+  );
   await expect(page.getByRole("link", { name: "Open on Meta Quest" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Enter VR" })).toHaveCount(0);
+  await expect(page.locator(".xr-door__note")).toHaveCount(0);
   await context.close();
 });
 

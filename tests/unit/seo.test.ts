@@ -19,6 +19,7 @@ describe("sitemap", () => {
       `${BASE}/about`,
       `${BASE}/proof`,
       `${BASE}/case`,
+      `${BASE}/case/ar`,
     ]);
   });
 });

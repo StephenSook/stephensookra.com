@@ -14,5 +14,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/about`, priority: 0.6 },
     { url: `${SITE_URL}/proof`, priority: 0.6 },
     { url: `${SITE_URL}/case`, priority: 0.5 },
+    { url: `${SITE_URL}/case/ar`, priority: 0.4 },
   ];
 }

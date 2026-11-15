@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Third-party builds, served as published (see THIRD_PARTY_NOTICES.md).
+    "public/vendor/**",
   ]),
 ]);
 

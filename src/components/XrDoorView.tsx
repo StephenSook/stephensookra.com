@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type ComponentType } from "react"
 import { webLaunchUrl } from "@/xr/support";
 import type { XrEndReason, XrSessionProps } from "@/xr/types";
 
-type Door = "checking" | "vr" | "launch" | "none";
+type Door = "checking" | "vr" | "launch" | "phone";
 type SessionComponent = ComponentType<XrSessionProps>;
 
 export type XrDoorViewProps = {
@@ -29,8 +29,9 @@ const END_STATUS: Record<XrEndReason, string> = {
 /**
  * The way into the headset mode. A browser that can run immersive VR gets Enter VR; a
  * laptop without it gets Meta's Web Launch link, which sends the page to the reader's
- * Quest; phones get nothing here. Server HTML is empty, so no one is offered a mode
- * before the browser has answered. The XR chunk loads on the first press, and a status
+ * Quest; a phone gets a link to see the case in its room (phone AR). Server HTML is
+ * empty, so no one is offered a mode before the browser has answered. The XR chunk loads
+ * on the first press, and a status
  * line says what happened (entering, in VR, which card is open, left).
  */
 export function XrDoorView({ checkSupport, isLaptop, pageUrl, note, loadSession }: XrDoorViewProps) {
@@ -46,7 +47,7 @@ export function XrDoorView({ checkSupport, isLaptop, pageUrl, note, loadSession 
   useEffect(() => {
     let live = true;
     checkSupport().then((vr) => {
-      if (live) setDoor(vr ? "vr" : isLaptop() ? "launch" : "none");
+      if (live) setDoor(vr ? "vr" : isLaptop() ? "launch" : "phone");
     });
     return () => {
       live = false;
@@ -100,6 +101,12 @@ export function XrDoorView({ checkSupport, isLaptop, pageUrl, note, loadSession 
       {showLaunch && (
         <a className="xr-door__launch" href={webLaunchUrl(pageUrl())} target="_blank" rel="noopener noreferrer">
           Open on Meta Quest
+        </a>
+      )}
+      {/* A phone without VR: the case in its room (phone AR, /case/ar). */}
+      {door === "phone" && (
+        <a className="xr-door__phone" href="/case/ar">
+          See it in your room
         </a>
       )}
       {(showVr || showLaunch) && <p className="xr-door__note">{note}</p>}

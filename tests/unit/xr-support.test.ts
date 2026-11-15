@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { doorNote, xrTests, xrTestsSchema, type XrTests } from "@/content/measurements/xr";
+import { doorNote, testedNote, xrTests, xrTestsSchema, type XrTests } from "@/content/measurements/xr";
 import { headsetPageUrl, webLaunchUrl, xrSupported } from "@/xr/support";
 
 const system = (isSessionSupported: XRSystem["isSessionSupported"]) => ({ isSessionSupported }) as XRSystem;
@@ -63,6 +63,12 @@ describe("headset test record", () => {
     quest3s: { name: "Meta Quest 3S", status: "not run" },
     androidXrEmulator: { name: "Android XR Emulator", status: "not run" },
     visionPro: { name: "Apple Vision Pro", status: "not run" },
+    iphoneQuickLook: { name: "iPhone with AR Quick Look", status: "not run" },
+    androidSceneViewer: { name: "Android with Scene Viewer", status: "not run" },
+    markerIphone: { name: "iPhone Safari", status: "not run" },
+    markerAndroid: { name: "Android Chrome", status: "not run" },
+    questPassthrough: { name: "Meta Quest 3S", status: "not run" },
+    visionImmersive: { name: "Apple Vision Pro", status: "not run" },
   };
 
   it("parses the committed record", () => {
@@ -109,5 +115,33 @@ describe("headset test record", () => {
       quest3s: { name: "Meta Quest 3S", status: "failed", date: "2026-11-20", evidence: "exit did not work" },
     };
     expect(doorNote(failed)).not.toMatch(/Tested on Meta/);
+  });
+});
+
+describe("testedNote (every other mode's line)", () => {
+  const base = xrTestsSchema.parse(xrTests);
+  const notRun: XrTests = Object.fromEntries(
+    Object.entries(base).map(([k, v]) => [k, { name: v.name, status: "not run" }]),
+  ) as XrTests;
+
+  it("says built for, not yet tested, for phone AR until a phone run passes", () => {
+    expect(testedNote(notRun, ["iphoneQuickLook", "androidSceneViewer"], "on a phone")).toBe(
+      "Built for iPhone with AR Quick Look and Android with Scene Viewer, not yet tested on a phone.",
+    );
+  });
+
+  it("names a passed run as tested and keeps the rest as built for", () => {
+    const tests: XrTests = {
+      ...notRun,
+      iphoneQuickLook: { name: "iPhone with AR Quick Look", status: "passed", date: "2026-11-20", evidence: "Stephen, iPhone 17 Pro" },
+    };
+    expect(testedNote(tests, ["iphoneQuickLook", "androidSceneViewer"], "on a phone")).toBe(
+      "Tested on iPhone with AR Quick Look. Built for Android with Scene Viewer, not yet tested.",
+    );
+  });
+
+  it("covers every key in the committed record (no mode without a line)", () => {
+    for (const key of Object.keys(base)) expect(base[key as keyof XrTests].status).toMatch(/not run|passed|failed/);
+    expect(Object.keys(base).sort()).toEqual(Object.keys(notRun).sort());
   });
 });
