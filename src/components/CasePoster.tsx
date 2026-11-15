@@ -1,0 +1,31 @@
+import { getImageProps } from "next/image";
+
+/**
+ * Still renders of the lit case, made in Blender from the same model as the 3D scene
+ * (scripts/blender/render_case.py). Phones, reduced motion and no-WebGL see only this.
+ */
+export const POSTER = {
+  light: "/case/poster-light.webp",
+  dark: "/case/poster-dark.webp",
+  width: 1600,
+  height: 900,
+} as const;
+
+const SIZES = "(min-width: 1280px) 1216px, calc(100vw - 2rem)";
+
+/** Light or dark render via <picture>, so only the matching file downloads. */
+export function CasePoster() {
+  // Decorative: the HTML grid below carries every project; the stage is aria-hidden.
+  const common = { alt: "", width: POSTER.width, height: POSTER.height, sizes: SIZES, quality: 80 };
+  const {
+    props: { srcSet: dark },
+  } = getImageProps({ ...common, src: POSTER.dark });
+  const { props: light } = getImageProps({ ...common, src: POSTER.light, fetchPriority: "high", loading: "eager" });
+  return (
+    <picture className="case-poster">
+      <source media="(prefers-color-scheme: dark)" srcSet={dark} sizes={SIZES} />
+      {/* eslint-disable-next-line @next/next/no-img-element -- art direction needs a plain img inside picture */}
+      <img {...light} alt="" />
+    </picture>
+  );
+}
