@@ -140,9 +140,15 @@ function Case({ onReady, onContextLost }: CaseSceneProps) {
       const r = el.getBoundingClientRect();
       return { x: ((e.clientX - r.left) / r.width) * 2 - 1, y: -((e.clientY - r.top) / r.height) * 2 + 1 };
     };
+    // Pick where the case is drawn now: it tilts towards the pointer.
+    const pick = (ndc: { x: number; y: number }) => {
+      const group = rigRef.current?.group;
+      group?.updateMatrixWorld();
+      return pickSlot(ndc, get().camera, layout, group?.matrixWorld);
+    };
     const onMove = (e: PointerEvent) => {
       const ndc = ndcOf(e);
-      const slug = pickSlot(ndc, get().camera, layout);
+      const slug = pick(ndc);
       caseLight.set("scene", slug);
       el.style.cursor = slug ? "pointer" : "default";
       rigRef.current?.setPointer(ndc);
@@ -155,7 +161,7 @@ function Case({ onReady, onContextLost }: CaseSceneProps) {
       invalidate();
     };
     const onClick = (e: MouseEvent) => {
-      const slug = pickSlot(ndcOf(e), get().camera, layout);
+      const slug = pick(ndcOf(e));
       if (slug) routerRef.current.push(`/work/${slug}`);
     };
     const onLost = (e: Event) => {

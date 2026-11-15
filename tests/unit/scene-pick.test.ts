@@ -7,6 +7,37 @@ import { fitCamera, pickSlot, projectToNdc } from "@/scene/pick";
 const layout = buildLayout(spec);
 const front = layout.depth / 2;
 
+describe("while the case is tilted towards the pointer", () => {
+  const camera = fitCamera(layout, 16 / 9);
+  const tilt = THREE.MathUtils.degToRad(2);
+  const group = new THREE.Group();
+  group.rotation.set(-tilt, tilt, 0);
+  group.updateMatrixWorld();
+  const onScreen = (x: number, y: number) =>
+    projectToNdc(new THREE.Vector3(x, y, front).applyMatrix4(group.matrixWorld), camera);
+
+  it("picks each slot where it is drawn, not where it rests", () => {
+    for (const slot of layout.projectSlots)
+      expect(pickSlot(onScreen(slot.opening.x, slot.opening.y), camera, layout, group.matrixWorld)).toBe(slot.slug);
+  });
+
+  it("picks nothing on a tilted divider or frame", () => {
+    const a1 = layout.projectSlots[0];
+    const divider = onScreen(a1.opening.x + a1.opening.w / 2 + spec.divider / 2, a1.opening.y);
+    const frame = onScreen(-layout.width / 2 + spec.frame / 2, 0);
+    expect(pickSlot(divider, camera, layout, group.matrixWorld)).toBeNull();
+    expect(pickSlot(frame, camera, layout, group.matrixWorld)).toBeNull();
+  });
+
+  it("would get the edge wrong without the transform", () => {
+    // A point just inside A1's left edge as drawn lies outside A1 at rest.
+    const a1 = layout.projectSlots[0];
+    const inside = onScreen(a1.opening.x - a1.opening.w / 2 + 0.002, a1.opening.y + a1.opening.h / 2 - 0.002);
+    expect(pickSlot(inside, camera, layout, group.matrixWorld)).toBe(a1.slug);
+    expect(pickSlot(inside, camera, layout)).toBeNull();
+  });
+});
+
 for (const aspect of [16 / 9, 4 / 3, 2.4]) {
   describe(`at aspect ${aspect.toFixed(2)}`, () => {
     const camera = fitCamera(layout, aspect);

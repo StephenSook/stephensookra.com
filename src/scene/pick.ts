@@ -31,14 +31,22 @@ export function projectToNdc(point: THREE.Vector3, camera: THREE.Camera): { x: n
 const raycaster = new THREE.Raycaster();
 const frontPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
 const hit = new THREE.Vector3();
+const toLocal = new THREE.Matrix4();
 
 /**
  * Which project slot is under a pointer, from its normalized device coordinates.
- * The ray meets the case's front plane and the hit must fall inside a project slot's
- * opening, so a divider, the frame, a small cell or the margin gives null.
+ * The ray is moved into the case's own space (it tilts towards the pointer), meets the
+ * case's front plane, and the hit must fall inside a project slot's opening, so a
+ * divider, the frame, a small cell or the margin gives null.
  */
-export function pickSlot(ndc: { x: number; y: number }, camera: THREE.Camera, layout: CaseLayout): string | null {
+export function pickSlot(
+  ndc: { x: number; y: number },
+  camera: THREE.Camera,
+  layout: CaseLayout,
+  caseMatrixWorld?: THREE.Matrix4,
+): string | null {
   raycaster.setFromCamera(new THREE.Vector2(ndc.x, ndc.y), camera);
+  if (caseMatrixWorld) raycaster.ray.applyMatrix4(toLocal.copy(caseMatrixWorld).invert());
   frontPlane.constant = -layout.depth / 2;
   if (!raycaster.ray.intersectPlane(frontPlane, hit)) return null;
   for (const slot of layout.projectSlots) {
