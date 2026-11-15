@@ -4,7 +4,7 @@ import { RepoStatusView } from "@/components/RepoStatus";
 import { featured, projects } from "@/content";
 import { fcpMeasurement } from "@/content/measurements";
 import { formatDate } from "@/lib/dates";
-import { formatMs, formatSeconds } from "@/lib/format";
+import { formatNumber, formatSeconds } from "@/lib/format";
 import { getRepoStatus, getRepoStatuses } from "@/lib/github";
 
 export const revalidate = 86400;
@@ -26,6 +26,7 @@ export default async function ProofPage() {
   const newSite = fcpMeasurement.sites.find((s) => s.label === "new preview");
   const oldSite = fcpMeasurement.sites.find((s) => s.label === "old site");
   const { profile } = fcpMeasurement;
+  const runCount = fcpMeasurement.sites[0]?.runsMs.length ?? 0;
 
   return (
     <article className="frame proof">
@@ -96,7 +97,8 @@ export default async function ProofPage() {
           )}
           <table className="proof__table">
             <caption className="muted">
-              First Contentful Paint, five cold runs each. {profile.viewport.width} by {profile.viewport.height} px at
+              First Contentful Paint in milliseconds, {runCount} cold runs each. {profile.viewport.width} by{" "}
+              {profile.viewport.height} px at
               DPR {profile.deviceScaleFactor}, Chrome DevTools &quot;{profile.network.name}&quot; network,{" "}
               {profile.cpuSlowdown}x CPU slowdown, {fcpMeasurement.browser}.
             </caption>
@@ -117,8 +119,14 @@ export default async function ProofPage() {
                       {s.label === "old site" ? "Previous site" : "This site (preview)"}{" "}
                       <span className="muted">{new URL(s.url).host}</span>
                     </th>
-                    <td>{formatMs(s.medianMs)}</td>
-                    <td>{s.runsMs.map(formatMs).join(", ")}</td>
+                    <td>{formatNumber(s.medianMs)}</td>
+                    <td>
+                      <ul className="proof__runs">
+                        {s.runsMs.map((run, i) => (
+                          <li key={i}>{formatNumber(run)}</li>
+                        ))}
+                      </ul>
+                    </td>
                     <td>{formatDate(s.measuredAt)}</td>
                   </tr>
                 ))}

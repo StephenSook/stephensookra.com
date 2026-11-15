@@ -9,3 +9,8 @@ export function formatSeconds(ms: number): string {
 export function formatMs(ms: number): string {
   return `${msFormat.format(ms)} ms`;
 }
+
+/** "2,392". */
+export function formatNumber(n: number): string {
+  return msFormat.format(n);
+}

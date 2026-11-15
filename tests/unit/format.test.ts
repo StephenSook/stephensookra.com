@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { formatMs, formatSeconds } from "@/lib/format";
+import { formatMs, formatNumber, formatSeconds } from "@/lib/format";
+
+describe("formatNumber", () => {
+  it("groups thousands without a unit", () => {
+    expect(formatNumber(2392)).toBe("2,392");
+  });
+});
 
 describe("formatSeconds", () => {
   it("writes milliseconds as seconds with two decimals", () => {

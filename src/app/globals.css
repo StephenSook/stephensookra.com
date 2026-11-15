@@ -233,6 +233,10 @@ p {
   font-size: var(--step-3);
 }
 
+.page-head > * + * {
+  margin-top: 0.75rem;
+}
+
 .section {
   padding-block: 2.5rem;
 }
@@ -765,6 +769,16 @@ body:has(a[data-light="software"]:is(:hover, :focus-visible)) [data-row="softwar
   vertical-align: top;
   padding: 0.5rem 0.75rem 0.5rem 0;
   border-bottom: 1px solid var(--line);
+}
+
+.proof__runs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.625rem;
+}
+
+.proof__runs li {
+  white-space: nowrap;
 }
 
 .proof__howto {
