@@ -649,6 +649,71 @@ body:has(a[data-light="software"]:is(:hover, :focus-visible)) [data-row="softwar
   padding-left: 1.25rem;
 }
 
+/* ------------------------------------------------------- resume and about */
+
+.resume {
+  max-width: 72ch;
+  margin-inline: auto;
+}
+
+.resume__pdf {
+  font-weight: 600;
+}
+
+.resume__section {
+  padding-block: 1.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.resume__section > h2 {
+  font-size: var(--step-2);
+  margin-bottom: 1rem;
+}
+
+.resume__entry {
+  display: grid;
+  gap: 0.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.resume__entry h3 {
+  font-size: var(--step-1);
+}
+
+.resume__bullets {
+  list-style: disc;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.375rem;
+}
+
+.resume__skills {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.resume__skills dt {
+  font-weight: 600;
+}
+
+.about__roles {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.about__roles li {
+  display: grid;
+}
+
+.about__role {
+  font-weight: 600;
+}
+
+.section.prose p + p {
+  margin-top: 1rem;
+}
+
 /* ---------------------------------------------------------- reduced motion */
 
 @media (prefers-reduced-motion: reduce) {
