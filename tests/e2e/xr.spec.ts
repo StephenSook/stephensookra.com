@@ -209,3 +209,19 @@ for (const input of ["controller", "hand"] as const) {
     await context.close();
   });
 }
+
+test("with ?xrstats=1 (the frame-rate readout) the headset session runs and closes without errors", async ({ browser }) => {
+  const { context, page } = await questPage(browser, "controller");
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto("/case?xrstats=1");
+  await page.getByRole("button", { name: "Enter VR" }).click();
+  const status = page.getByRole("status");
+  await expect(status).toHaveText("In VR", { timeout: 15_000 });
+  await page.waitForTimeout(1200); // the readout updates every half second
+  await aim(page, "controller", onCase(0, EXIT_Y));
+  await select(page, "controller");
+  await expect(status).toHaveText("Left VR");
+  expect(errors).toEqual([]);
+  await context.close();
+});

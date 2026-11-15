@@ -12,12 +12,19 @@ const BUDGETS = [
 const LAZY_3D_JS = 350 * KB;
 const MAX_FILE = 10 * 1024 * KB;
 const THREE_ROUTES = new Set(["/", "/case"]);
+/** In the XR chunk only (the XR store's options); no page may load it before Enter VR. */
+const XR_MARKER = "offerSession";
 
 type Entry = { name: string; start: number; bytes: number; type: string };
 
 async function measure(browser: Browser, options: BrowserContextOptions, path: string) {
   const context = await browser.newContext(options);
   const page = await context.newPage();
+  const xrScripts: string[] = [];
+  page.on("response", async (res) => {
+    if (res.request().resourceType() !== "script") return;
+    if ((await res.text().catch(() => "")).includes(XR_MARKER)) xrScripts.push(res.url());
+  });
   await page.goto(path);
   await page.waitForLoadState("networkidle");
   // Give the gated scene its idle window, then let the network settle again.
@@ -39,11 +46,11 @@ async function measure(browser: Browser, options: BrowserContextOptions, path: s
     };
   });
   await context.close();
-  return result as { loadEnd: number; docBytes: number; entries: Entry[]; three: string | null };
+  return { ...(result as { loadEnd: number; docBytes: number; entries: Entry[]; three: string | null }), xrScripts };
 }
 
 for (const budget of BUDGETS) {
-  test(`budgets on ${budget.name}: first view, lazy 3D chunk, and three.js only where it belongs`, async ({
+  test(`budgets on ${budget.name}: first view, lazy 3D chunk, three.js only where it belongs, no XR code`, async ({
     browser,
     request,
   }) => {
@@ -65,6 +72,8 @@ for (const budget of BUDGETS) {
       const allowed = budget.name === "desktop" && THREE_ROUTES.has(path);
       if (allowed) expect(r.three, `${path} should load three.js on desktop`).not.toBeNull();
       else expect(r.three, `${path} must not load three.js on ${budget.name}`).toBeNull();
+      // The XR chunk loads only after an Enter VR press (brief section 11).
+      expect(r.xrScripts, `${path} must not load XR code on ${budget.name}`).toEqual([]);
     }
     console.log(`[budget ${budget.name}] ${report.join(" | ")}`);
   });

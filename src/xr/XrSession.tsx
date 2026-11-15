@@ -12,7 +12,8 @@ import { createRig, type CaseRig } from "@/scene/rig";
 import { xrAssetBase } from "./assets";
 import { CardPanel } from "./CardPanel";
 import { CARD_IN_FRONT } from "./cardLayout";
-import { Label } from "./Label";
+import { createFrameStats, statsText, wantsStats } from "./frameStats";
+import { FONT_REGULAR, Label } from "./Label";
 import { slotLabels, LABEL_SIZE } from "./labels";
 import { pickPlanes, placeCase } from "./placement";
 import type { XrEndReason, XrSessionProps } from "./types";
@@ -83,8 +84,33 @@ function Session({ store, onStarted, onEnded }: { store: XRStore } & Omit<XrSess
   return null;
 }
 
+/** ?xrstats=1: the session's target rate and the measured rate, under the case. */
+function Stats({ store }: { store: XRStore }) {
+  const stats = useMemo(() => createFrameStats(), []);
+  const [text, setText] = useState(() => statsText(undefined, stats.summary()));
+  const since = useRef(0);
+  useFrame((_state, dt) => {
+    stats.push(dt);
+    since.current += dt;
+    if (since.current < 0.5) return;
+    since.current = 0;
+    setText(statsText(store.getState().session?.frameRate, stats.summary()));
+  });
+  return (
+    <Label
+      text={text}
+      size={0.02}
+      position={[-layout.width / 2, EXIT.y, layout.depth / 2]}
+      anchorY="middle"
+      maxWidth={0.5}
+      font={FONT_REGULAR}
+      color="#cfd3da"
+    />
+  );
+}
+
 /** The case, its slot targets, labels and the exit, placed in front of the viewer. */
-function HeadsetCase({ store, onCard }: { store: XRStore; onCard: XrSessionProps["onCard"] }) {
+function HeadsetCase({ store, onCard, showStats }: { store: XRStore; onCard: XrSessionProps["onCard"]; showStats: boolean }) {
   const group = useRef<THREE.Group>(null);
   const placed = useRef(false);
   const rig = useRef<CaseRig | null>(null);
@@ -202,6 +228,7 @@ function HeadsetCase({ store, onCard }: { store: XRStore; onCard: XrSessionProps
         texture={texture}
         onClose={() => select(null)}
       />
+      {showStats && <Stats store={store} />}
     </group>
   );
 }
@@ -212,6 +239,7 @@ function HeadsetCase({ store, onCard }: { store: XRStore; onCard: XrSessionProps
  */
 export default function XrSession({ onStarted, onEnded, onCard }: XrSessionProps) {
   const [store] = useState(() => makeStore(window.location.origin));
+  const [showStats] = useState(() => wantsStats(window.location.search));
   return (
     <div className="xr-session" aria-hidden="true">
       <Canvas flat dpr={1} gl={{ antialias: true }}>
@@ -220,7 +248,7 @@ export default function XrSession({ onStarted, onEnded, onCard }: XrSessionProps
           <ambientLight intensity={1.4} />
           <directionalLight position={[0.6, 1.2, 2]} intensity={2} />
           <XROrigin />
-          <HeadsetCase store={store} onCard={onCard} />
+          <HeadsetCase store={store} onCard={onCard} showStats={showStats} />
           <Session store={store} onStarted={onStarted} onEnded={onEnded} />
         </XR>
       </Canvas>
