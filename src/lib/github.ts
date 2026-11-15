@@ -83,6 +83,28 @@ async function readJson<T>(fetcher: typeof fetch, path: string, schema: z.ZodTyp
   return parsed.data;
 }
 
+const RUNS_PER_PAGE = 100;
+const MAX_RUN_PAGES = 5;
+
+/**
+ * Every push run on one commit, across pages. If the runs cannot all be read (a page
+ * fails, or there are more than MAX_RUN_PAGES pages), it throws, and the repo reads
+ * "not available" rather than a verdict built on part of the runs.
+ */
+async function readAllRuns(fetcher: typeof fetch, repo: string, sha: string): Promise<Run[]> {
+  const runs: Run[] = [];
+  for (let page = 1; page <= MAX_RUN_PAGES; page++) {
+    const batch = await readJson(
+      fetcher,
+      `/repos/${repo}/actions/runs?head_sha=${sha}&event=push&per_page=${RUNS_PER_PAGE}&page=${page}`,
+      runsSchema,
+    );
+    runs.push(...batch.workflow_runs);
+    if (runs.length >= batch.total_count || batch.workflow_runs.length === 0) return runs;
+  }
+  throw new ReadFailed(`/repos/${repo}/actions/runs: more than ${MAX_RUN_PAGES * RUNS_PER_PAGE} runs`);
+}
+
 /** Statuses for several repos, each read once, keyed by "owner/name". */
 export async function getRepoStatuses(
   repos: string[],
@@ -109,12 +131,7 @@ export async function getRepoStatus(repo: string, fetcher: typeof fetch = fetch)
     const head = await readJson(fetcher, `/repos/${repo}/branches/${branch}`, branchSchema);
     // Every push run on the head commit, finished or not, so one passing workflow cannot
     // hide a failing or unfinished sibling. Push runs only: scheduled uptime probes are not CI.
-    const runs = await readJson(
-      fetcher,
-      `/repos/${repo}/actions/runs?head_sha=${head.commit.sha}&event=push&per_page=100`,
-      runsSchema,
-    );
-    const ci = ciVerdict(runs.workflow_runs);
+    const ci = ciVerdict(await readAllRuns(fetcher, repo, head.commit.sha));
 
     return {
       state: "ok",

@@ -81,6 +81,45 @@ describe("getRepoStatus", () => {
     expect(await ciOf(["failure", "in_progress"])).toBe("failing");
   });
 
+  describe("more than one page of runs", () => {
+    const success = { status: "completed", conclusion: "success" };
+    /** Page 1 holds 100 successes; page 2 holds `last` (or fails with HTTP 500 when null). */
+    const paged = (last: { status: string; conclusion: string | null } | null) => {
+      const base = fakeFetch(okRoutes);
+      const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(String(input));
+        if (url.pathname.endsWith("/actions/runs")) {
+          base.calls.push({ url: url.toString(), init });
+          const page = url.searchParams.get("page") ?? "1";
+          if (page === "1")
+            return Response.json({ total_count: 101, workflow_runs: Array.from({ length: 100 }, () => success) });
+          if (last === null) return new Response("{}", { status: 500 });
+          return Response.json({ total_count: 101, workflow_runs: [last] });
+        }
+        return base.fetcher(input, init);
+      }) as typeof fetch;
+      return { fetcher, calls: base.calls };
+    };
+
+    it("finds a failure on the second page", async () => {
+      const { fetcher, calls } = paged({ status: "completed", conclusion: "failure" });
+      const status = await getRepoStatus("StephenSook/case-light", fetcher);
+      expect(status.state === "ok" && status.ci).toBe("failing");
+      expect(calls.filter((c) => c.url.includes("/actions/runs")).map((c) => new URL(c.url).searchParams.get("page"))).toEqual(["1", "2"]);
+    });
+
+    it("finds an unfinished run on the second page", async () => {
+      const { fetcher } = paged({ status: "in_progress", conclusion: null });
+      const status = await getRepoStatus("StephenSook/case-light", fetcher);
+      expect(status.state === "ok" && status.ci).toBe("running");
+    });
+
+    it("returns unavailable when a later page cannot be read", async () => {
+      const { fetcher } = paged(null);
+      expect((await getRepoStatus("StephenSook/case-light", fetcher)).state).toBe("unavailable");
+    });
+  });
+
   it("returns unavailable for a malformed commit date instead of a status that crashes rendering", async () => {
     const { fetcher } = fakeFetch({
       ...okRoutes,
