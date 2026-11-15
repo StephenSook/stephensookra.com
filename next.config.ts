@@ -18,6 +18,14 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  // Old URLs from the previous site keep working (brief section 5, decision 8).
+  async redirects() {
+    return [
+      { source: "/lab", destination: "/case", statusCode: 301 },
+      { source: "/work/saber", destination: "/work", statusCode: 301 },
+      { source: "/work/nest", destination: "/work", statusCode: 301 },
+    ];
+  },
 };
 
 export default nextConfig;

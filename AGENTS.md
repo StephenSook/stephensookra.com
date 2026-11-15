@@ -20,6 +20,11 @@ Node 22.19 or newer (`.nvmrc`). Install with `npm ci`.
 | Unit tests (Vitest) | `npm test` |
 | Production build | `npm run build` |
 | Serve the build | `npm run start` |
+| End-to-end tests (Playwright, needs a build) | `npm run e2e` |
+| Lighthouse budgets (needs a build) | `npx lhci autorun` |
+| Outside link checks (network) | `npm run links` |
+| Re-measure First Contentful Paint | `npm run measure:fcp -- "label=https://..."` |
+| Stills at 390 and 1280 px, light and dark | `npm run stills -- <baseUrl> <outDir> [route ...]` |
 
 Run `sh scripts/install-hooks.sh` once after cloning. It adds a pre-commit hook that scans staged changes with gitleaks.
 

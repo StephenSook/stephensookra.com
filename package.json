@@ -9,7 +9,11 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "measure:fcp": "node scripts/measure-fcp.mjs",
+    "stills": "node scripts/stills.mjs",
+    "e2e": "playwright test",
+    "links": "vitest run --config vitest.links.config.mts"
   },
   "dependencies": {
     "next": "16.4.6",
@@ -18,6 +22,9 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@lhci/cli": "0.16.1",
+    "@playwright/test": "1.65.1",
     "@tailwindcss/turbopack": "4.3.3",
     "@testing-library/dom": "10.4.2",
     "@testing-library/jest-dom": "7.0.1",
@@ -32,10 +39,11 @@
     "schema-dts": "2.1.0",
     "tailwindcss": "4.3.3",
     "typescript": "^5",
+    "unpdf": "2.1.0",
     "vitest": "5.1.0"
   },
   "engines": {
-    "node": ">=22.19"
+    "node": "22.x"
   },
   "overrides": {
     "tldts": "7.5.3"

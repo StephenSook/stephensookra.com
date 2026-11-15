@@ -1,0 +1,49 @@
+{
+  "metric": "first-contentful-paint",
+  "tool": "Playwright 1.65.1, CDP throttling",
+  "browser": "Chromium 159.0.8154.6",
+  "profile": {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "deviceScaleFactor": 3,
+    "network": {
+      "name": "Slow 4G",
+      "latencyMs": 562.5,
+      "downloadBytesPerSecond": 180000,
+      "uploadBytesPerSecond": 84375,
+      "source": "https://github.com/ChromeDevTools/devtools-frontend/blob/main/front_end/core/sdk/NetworkManager.ts"
+    },
+    "cpuSlowdown": 4,
+    "cache": "cold, new browser per run"
+  },
+  "sites": [
+    {
+      "label": "old site",
+      "url": "https://stephensookra.com/",
+      "measuredAt": "2026-11-15T10:42:52.085Z",
+      "runsMs": [
+        2404,
+        2364,
+        2344,
+        2424,
+        2408
+      ],
+      "medianMs": 2404
+    },
+    {
+      "label": "new preview",
+      "url": "https://stephensookra-55rxzv30n-ssookra-7703s-projects.vercel.app/",
+      "measuredAt": "2026-11-15T10:42:07.765Z",
+      "runsMs": [
+        1596,
+        1564,
+        1604,
+        1652,
+        1552
+      ],
+      "medianMs": 1596
+    }
+  ]
+}

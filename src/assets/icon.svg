@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- A small letter case: wood frame, six slots, one lit. -->
+  <rect width="512" height="512" rx="96" fill="#6E5238"/>
+  <g fill="#0F1115">
+    <rect x="56" y="104" width="120" height="136"/>
+    <rect x="196" y="104" width="120" height="136"/>
+    <rect x="336" y="104" width="120" height="136"/>
+    <rect x="56" y="272" width="120" height="136"/>
+    <rect x="336" y="272" width="120" height="136"/>
+  </g>
+  <rect x="196" y="272" width="120" height="136" fill="#FFB547"/>
+</svg>
