@@ -31,7 +31,8 @@ export default async function WorkPage() {
 
       <div className="frame">
         <div className="case">
-          <ProjectRow id="xr" letter="A" heading="XR work" projects={xr} statuses={statuses} />
+          {/* The XR row sits in the first screen here, so its posters can be the largest paint. */}
+          <ProjectRow id="xr" letter="A" heading="XR work" projects={xr} statuses={statuses} eagerPosters />
           <ProjectRow id="software" letter="B" heading="Software work" projects={software} statuses={statuses} />
         </div>
       </div>

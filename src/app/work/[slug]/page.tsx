@@ -58,8 +58,8 @@ export default async function ProjectPage({ params }: PageProps<"/work/[slug]">)
           width={project.poster.width}
           height={project.poster.height}
           alt={project.poster.alt}
-          sizes="(min-width: 1280px) 720px, 100vw"
-          priority
+          sizes="(min-width: 768px) 720px, 100vw"
+          preload
         />
       ) : null}
 

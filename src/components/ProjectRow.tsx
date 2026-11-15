@@ -9,11 +9,12 @@ type Props = {
   heading: string;
   projects: Project[];
   statuses?: Record<string, RepoStatus>;
-  priorityPosters?: boolean;
+  /** Load this row's posters early: set it on the row that sits in the first screen. */
+  eagerPosters?: boolean;
 };
 
 /** One row of the case. data-row lets the first-screen links light the whole row. */
-export function ProjectRow({ id, letter, heading, projects, statuses = {}, priorityPosters = false }: Props) {
+export function ProjectRow({ id, letter, heading, projects, statuses = {}, eagerPosters = false }: Props) {
   return (
     <section id={id} className="case-row" data-row={id} aria-labelledby={`${id}-heading`}>
       <h2 id={`${id}-heading`} className="case-row__heading">
@@ -26,7 +27,8 @@ export function ProjectRow({ id, letter, heading, projects, statuses = {}, prior
             project={project}
             slotLabel={`${letter}${i + 1}`}
             status={project.repo ? statuses[project.repo] : undefined}
-            priority={priorityPosters}
+            // The first slot's poster is the largest paint at every width; preload it, load the rest early.
+            posterLoad={eagerPosters ? (i === 0 ? "preload" : "eager") : "lazy"}
           />
         ))}
         {/* An empty pigeonhole keeps the two-column phone grid square when the row is odd. */}

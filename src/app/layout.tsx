@@ -8,6 +8,8 @@ import { buildPersonJsonLd } from "@/content/jsonld";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
+// Only the display face is preloaded: it sets the name, the first and largest text.
+// Body and mono load from the stylesheet, so they do not compete with first-screen posters.
 const display = Familjen_Grotesk({
   variable: "--font-familjen",
   subsets: ["latin"],
@@ -18,6 +20,7 @@ const body = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
+  preload: false,
 });
 
 const mono = IBM_Plex_Mono({
@@ -25,6 +28,7 @@ const mono = IBM_Plex_Mono({
   subsets: ["latin"],
   weight: "500",
   display: "swap",
+  preload: false,
 });
 
 const defaultTitle = `${profile.name} | ${profile.title}`;

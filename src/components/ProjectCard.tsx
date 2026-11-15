@@ -10,15 +10,25 @@ type Props = {
   /** Position in the case, such as "A1": row letter and column number. */
   slotLabel: string;
   status?: RepoStatus;
-  /** Load the poster eagerly (only for posters in the first screen). */
-  priority?: boolean;
+  /**
+   * How the poster loads. "lazy" (default) waits until it nears the viewport;
+   * "eager" loads it at high priority for first-screen slots; "preload" also adds a
+   * <link rel="preload"> in the head, for the one poster that is the largest paint.
+   */
+  posterLoad?: "lazy" | "eager" | "preload";
 };
 
 /**
  * One slot in the case. The title is the only link; its ::after stretches over
  * the whole slot, so the slot is one click target and one tab stop.
  */
-export function ProjectCard({ project, slotLabel, status, priority = false }: Props) {
+export function ProjectCard({ project, slotLabel, status, posterLoad = "lazy" }: Props) {
+  const loadProps =
+    posterLoad === "preload"
+      ? { preload: true }
+      : posterLoad === "eager"
+        ? ({ loading: "eager", fetchPriority: "high" } as const)
+        : ({ loading: "lazy" } as const);
   return (
     <article className="slot" data-slot={slotLabel}>
       <span className="slot__label mono" aria-hidden="true">
@@ -32,7 +42,7 @@ export function ProjectCard({ project, slotLabel, status, priority = false }: Pr
           height={project.poster.height}
           alt={project.poster.alt}
           sizes="(min-width: 1280px) 360px, (min-width: 768px) 30vw, 46vw"
-          priority={priority}
+          {...loadProps}
         />
       ) : (
         // No public media (XR Dojo's work is company property): the platform stands in for the poster.

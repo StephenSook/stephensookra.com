@@ -108,6 +108,28 @@ describe("ProjectCard", () => {
     expect(screen.getByText("Snap Specs Lens, Lens Studio preview")).toBeInTheDocument();
   });
 
+  it("lazy-loads its poster by default and loads it early when it may be the largest paint", () => {
+    const { unmount } = render(<ProjectCard project={projectBySlug("varsity")!} slotLabel="B1" />);
+    expect(screen.getByRole("img")).toHaveAttribute("loading", "lazy");
+    unmount();
+    render(<ProjectCard project={projectBySlug("varsity")!} slotLabel="B1" posterLoad="eager" />);
+    const img = screen.getByRole("img");
+    expect(img).toHaveAttribute("loading", "eager");
+    expect(img).toHaveAttribute("fetchpriority", "high");
+  });
+});
+
+describe("ProjectRow poster loading", () => {
+  it("preloads only the first poster of an early row and loads the rest eagerly", () => {
+    const projects = ["case-light", "glare-zone", "xr-dojo"].map((s) => projectBySlug(s)!);
+    render(<ProjectRow id="xr" letter="A" heading="XR work" projects={projects} eagerPosters />);
+    const imgs = screen.getAllByRole("img");
+    expect(imgs).toHaveLength(2);
+    expect(imgs[0]).not.toHaveAttribute("loading", "lazy");
+    expect(imgs[1]).toHaveAttribute("loading", "eager");
+    expect(imgs[1]).toHaveAttribute("fetchpriority", "high");
+  });
+
   it("renders XR Dojo without an image or an outside link", () => {
     render(<ProjectCard project={projectBySlug("xr-dojo")!} slotLabel="A3" />);
     expect(screen.queryByRole("img")).toBeNull();
