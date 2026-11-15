@@ -8,8 +8,11 @@ export type RepoStatus =
       /** ISO timestamp of the newest commit on the default branch. */
       lastCommit: string;
       stars: number;
-      /** Push-triggered workflow runs on the default branch's head commit: failing if any failed. */
-      ci: "passing" | "failing" | "none";
+      /**
+       * Push-triggered workflow runs on the default branch's head commit: failing if any
+       * failed, running if any has not finished, passing only when all that gave a verdict passed.
+       */
+      ci: CiState;
       license: string | null;
     }
   | { state: "unavailable"; repo: string; url: string };
@@ -26,26 +29,37 @@ const repoSchema = z.object({
   license: z.object({ spdx_id: z.string().nullable() }).nullable(),
 });
 
+export type CiState = "passing" | "failing" | "running" | "none";
+
 const branchSchema = z.object({
   commit: z.object({
     sha: z.string().min(7),
-    commit: z.object({ committer: z.object({ date: z.string() }) }),
+    // A date that cannot be formatted would pass as "ok" and then throw while rendering.
+    commit: z.object({ committer: z.object({ date: z.iso.datetime({ offset: true }) }) }),
   }),
 });
 
 /** Conclusions that say whether CI passed. Cancelled, skipped and neutral runs say nothing. */
 const VERDICTS = new Set(["success", "failure", "timed_out", "startup_failure", "action_required"]);
 
-/** CI for one commit: failing if any workflow failed, passing if all that gave a verdict passed. */
-function ciVerdict(conclusions: (string | null)[]): "passing" | "failing" | "none" {
-  const verdicts = conclusions.filter((c): c is string => c !== null && VERDICTS.has(c));
-  if (verdicts.length === 0) return "none";
-  return verdicts.every((c) => c === "success") ? "passing" : "failing";
+type Run = { status: string; conclusion: string | null };
+
+/**
+ * CI for one commit. A finished failure decides it; otherwise any unfinished run means
+ * "running" (a sibling may still fail); otherwise passing if every verdict passed.
+ */
+function ciVerdict(runs: Run[]): CiState {
+  const verdicts = runs.flatMap((r) =>
+    r.status === "completed" && r.conclusion !== null && VERDICTS.has(r.conclusion) ? [r.conclusion] : [],
+  );
+  if (verdicts.some((c) => c !== "success")) return "failing";
+  if (runs.some((r) => r.status !== "completed")) return "running";
+  return verdicts.length > 0 ? "passing" : "none";
 }
 
 const runsSchema = z.object({
   total_count: z.number().int().nonnegative(),
-  workflow_runs: z.array(z.object({ conclusion: z.string().nullable() })),
+  workflow_runs: z.array(z.object({ status: z.string(), conclusion: z.string().nullable() })),
 });
 
 class ReadFailed extends Error {}
@@ -93,14 +107,14 @@ export async function getRepoStatus(repo: string, fetcher: typeof fetch = fetch)
 
     const branch = encodeURIComponent(meta.default_branch);
     const head = await readJson(fetcher, `/repos/${repo}/branches/${branch}`, branchSchema);
-    // Every completed push run on the head commit, so one passing workflow cannot hide a
-    // failing sibling. Push runs only: scheduled uptime probes are not CI.
+    // Every push run on the head commit, finished or not, so one passing workflow cannot
+    // hide a failing or unfinished sibling. Push runs only: scheduled uptime probes are not CI.
     const runs = await readJson(
       fetcher,
-      `/repos/${repo}/actions/runs?head_sha=${head.commit.sha}&event=push&status=completed&per_page=100`,
+      `/repos/${repo}/actions/runs?head_sha=${head.commit.sha}&event=push&per_page=100`,
       runsSchema,
     );
-    const ci = ciVerdict(runs.workflow_runs.map((r) => r.conclusion));
+    const ci = ciVerdict(runs.workflow_runs);
 
     return {
       state: "ok",

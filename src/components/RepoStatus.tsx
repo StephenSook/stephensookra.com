@@ -1,7 +1,12 @@
 import { formatDate } from "@/lib/dates";
-import type { RepoStatus } from "@/lib/github";
+import type { CiState, RepoStatus } from "@/lib/github";
 
-const CI_TEXT = { passing: "CI passing", failing: "CI failing", none: "No CI runs" } as const;
+const CI_TEXT: Record<CiState, string> = {
+  passing: "CI passing",
+  failing: "CI failing",
+  running: "CI running",
+  none: "No CI runs",
+};
 
 /** Live repo facts read from GitHub at build time; "not available" when the read failed. */
 export function RepoStatusView({ status }: { status: RepoStatus }) {

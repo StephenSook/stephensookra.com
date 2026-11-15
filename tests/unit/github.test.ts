@@ -23,7 +23,7 @@ const okRoutes: Record<string, Route> = {
     body: { commit: { sha: "79a8d54", commit: { committer: { date: "2026-11-04T08:22:08Z" } } } },
   },
   "/repos/StephenSook/case-light/actions/runs": {
-    body: { total_count: 12, workflow_runs: [{ conclusion: "success" }] },
+    body: { total_count: 1, workflow_runs: [{ status: "completed", conclusion: "success" }] },
   },
   "/repos/StephenSook/case-light": {
     body: { private: false, stargazers_count: 3, default_branch: "main", license: { spdx_id: "MIT" } },
@@ -57,17 +57,39 @@ describe("getRepoStatus", () => {
     expect(status.state === "ok" && status.ci).toBe("none");
   });
 
-  const withRuns = (conclusions: (string | null)[]) =>
+  // "queued" and "in_progress" are unfinished runs; anything else is a completed run's conclusion.
+  const toRun = (s: string) =>
+    s === "queued" || s === "in_progress" ? { status: s, conclusion: null } : { status: "completed", conclusion: s };
+  const withRuns = (runs: string[]) =>
     fakeFetch({
       ...okRoutes,
       "/repos/StephenSook/case-light/actions/runs": {
-        body: { total_count: conclusions.length, workflow_runs: conclusions.map((conclusion) => ({ conclusion })) },
+        body: { total_count: runs.length, workflow_runs: runs.map(toRun) },
       },
     }).fetcher;
-  const ciOf = async (conclusions: (string | null)[]) => {
-    const status = await getRepoStatus("StephenSook/case-light", withRuns(conclusions));
+  const ciOf = async (runs: string[]) => {
+    const status = await getRepoStatus("StephenSook/case-light", withRuns(runs));
     return status.state === "ok" ? status.ci : status.state;
   };
+
+  it("reports ci running, not passing, while a sibling workflow has not finished", async () => {
+    expect(await ciOf(["success", "in_progress"])).toBe("running");
+    expect(await ciOf(["success", "queued"])).toBe("running");
+  });
+
+  it("reports a finished failure even while other workflows still run", async () => {
+    expect(await ciOf(["failure", "in_progress"])).toBe("failing");
+  });
+
+  it("returns unavailable for a malformed commit date instead of a status that crashes rendering", async () => {
+    const { fetcher } = fakeFetch({
+      ...okRoutes,
+      "/repos/StephenSook/case-light/branches/main": {
+        body: { commit: { sha: "79a8d54", commit: { committer: { date: "not-a-date" } } } },
+      },
+    });
+    expect((await getRepoStatus("StephenSook/case-light", fetcher)).state).toBe("unavailable");
+  });
 
   it("reports ci failing when any workflow on the head commit failed, even if another passed", async () => {
     expect(await ciOf(["success", "failure"])).toBe("failing");
@@ -82,14 +104,14 @@ describe("getRepoStatus", () => {
     expect(await ciOf(["cancelled", "skipped"])).toBe("none");
   });
 
-  it("asks for every completed push run on the default branch's head commit, so scheduled probes do not count as CI", async () => {
+  it("asks for every push run, finished or not, on the default branch's head commit, so scheduled probes do not count as CI", async () => {
     const { fetcher, calls } = fakeFetch(okRoutes);
     await getRepoStatus("StephenSook/case-light", fetcher);
     const runs = calls.find((c) => c.url.includes("/actions/runs"))!;
     const params = new URL(runs.url).searchParams;
     expect(params.get("head_sha")).toBe("79a8d54");
     expect(params.get("event")).toBe("push");
-    expect(params.get("status")).toBe("completed");
+    expect(params.has("status")).toBe(false);
     expect(params.get("per_page")).toBe("100");
   });
 

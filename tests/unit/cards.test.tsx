@@ -77,6 +77,23 @@ describe("RepoStatusView", () => {
     expect(container).toHaveTextContent("1 star");
   });
 
+  it("says when CI has not finished", () => {
+    const { container } = render(
+      <RepoStatusView
+        status={{
+          state: "ok",
+          repo: "StephenSook/x",
+          url: "https://github.com/StephenSook/x",
+          lastCommit: "2026-01-02T00:00:00Z",
+          stars: 2,
+          ci: "running",
+          license: null,
+        }}
+      />,
+    );
+    expect(container).toHaveTextContent("CI running");
+  });
+
   it("says when a repo has no CI runs", () => {
     const { container } = render(
       <RepoStatusView
