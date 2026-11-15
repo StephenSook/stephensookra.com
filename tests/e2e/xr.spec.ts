@@ -76,8 +76,12 @@ const slotCentre = (slug: string) => {
   const plane = pickPlanes(layout).find((p) => p.slug === slug)!;
   return onCase(plane.x, plane.y);
 };
-const closeButton = inCase(CLOSE.x, CLOSE.y, layout.depth / 2 + CARD_IN_FRONT);
-const cardCentre = inCase(0, 0, layout.depth / 2 + CARD_IN_FRONT);
+/** A place to point at, and the name the session gives it in data-pointing. */
+type Target = { at: THREE.Vector3; name: string };
+const slot = (slug: string): Target => ({ at: slotCentre(slug), name: slug });
+const CLOSE_BUTTON: Target = { at: inCase(CLOSE.x, CLOSE.y, layout.depth / 2 + CARD_IN_FRONT), name: "close" };
+const CARD: Target = { at: inCase(0, 0, layout.depth / 2 + CARD_IN_FRONT), name: "card" };
+const EXIT: Target = { at: onCase(0, EXIT_Y), name: "exit" };
 
 type Input = "controller" | "hand";
 /** Where the right hand points from: a little right of and below the eyes. */
@@ -85,9 +89,26 @@ const RIGHT = new THREE.Vector3(0.15, 1.35, -0.25);
 /** Reaching across to the left, past an open card. */
 const LEFT = new THREE.Vector3(-0.45, 1.45, -0.3);
 
-/** Points the right controller or hand from `from` at a world point. */
-async function aim(page: Page, input: Input, target: THREE.Vector3, from = RIGHT) {
-  const dir = target.clone().sub(from).normalize();
+/**
+ * Waits for n animation frames. The emulated headset moves inputs and fires select events
+ * on its own frames, so tests wait for frames, not milliseconds (a busy CI machine draws
+ * fewer frames per second).
+ */
+const frames = (page: Page, n: number) =>
+  page.evaluate(
+    (n) =>
+      new Promise<void>((resolve) => {
+        let k = 0;
+        const tick = () => (++k >= n ? resolve() : requestAnimationFrame(tick));
+        requestAnimationFrame(tick);
+      }),
+    n,
+  );
+
+/** Points the right controller or hand from `from` at a target, and waits until the session
+ * reports the pointer is on it (data-pointing), however slowly the headset draws frames. */
+async function aim(page: Page, input: Input, target: Target, from = RIGHT) {
+  const dir = target.at.clone().sub(from).normalize();
   const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, -1), dir);
   await page.evaluate(
     ({ input, p, q }) => {
@@ -98,25 +119,65 @@ async function aim(page: Page, input: Input, target: THREE.Vector3, from = RIGHT
     },
     { input, p: from.toArray(), q: q.toArray() },
   );
-  await page.waitForTimeout(150); // a few frames, so the pointer moves onto the target
+  await expect(page.locator(".xr-session")).toHaveAttribute("data-pointing", target.name, { timeout: 10_000 });
 }
 
-/** A full select: press, hold briefly, release (a trigger pull or a pinch). */
+/**
+ * A full select (a trigger pull or a pinch), paced by the headset's own events: press and
+ * wait for its selectstart, release and wait for its selectend. A click needs press and
+ * release within 300 ms, and the emulated headset samples inputs only on its own frames, so
+ * waiting on its events works at any frame rate where waiting on a clock does not.
+ */
 async function select(page: Page, input: Input) {
-  const set = (value: number) =>
-    page.evaluate(
-      ({ input, value }) => {
-        const device = (window as unknown as { __xrDevice: any }).__xrDevice; // eslint-disable-line @typescript-eslint/no-explicit-any
-        if (input === "hand") device.hands.right.updatePinchValue(value);
-        else device.controllers.right.updateButtonValue("trigger", value);
-      },
-      { input, value },
+  for (const [value, event] of [
+    [1, "selectstart"],
+    [0, "selectend"],
+  ] as const) {
+    await page.evaluate(
+      ({ input, value, event }) =>
+        new Promise<void>((resolve, reject) => {
+          const device = (window as unknown as { __xrDevice: any }).__xrDevice; // eslint-disable-line @typescript-eslint/no-explicit-any
+          const session: XRSession = device.activeSession;
+          const timer = setTimeout(() => reject(new Error(`no ${event} within 5 s`)), 5000);
+          session.addEventListener(event, () => (clearTimeout(timer), resolve()), { once: true });
+          if (input === "hand") device.hands.right.updatePinchValue(value);
+          else device.controllers.right.updateButtonValue("trigger", value);
+        }),
+      { input, value, event },
     );
-  await set(1);
-  await page.waitForTimeout(120);
-  await set(0);
-  await page.waitForTimeout(150);
+  }
+  await frames(page, 2); // the pointer library dispatches the click
 }
+
+/**
+ * Aims and selects until the status says `expected`. The emulated headset's ray settles over
+ * a few frames (a hand's ray also moves as it pinches), and a click needs the press and the
+ * release on the same object, so one attempt can miss. The status is checked before every
+ * retry, so a click that lands late is never undone by a second select.
+ */
+async function selectUntil(page: Page, input: Input, target: Target, expected: string, from = RIGHT) {
+  const status = page.getByRole("status");
+  await expect(async () => {
+    if ((await status.textContent()) === expected) return;
+    await aim(page, input, target, from);
+    await select(page, input);
+    await expect(status).toHaveText(expected, { timeout: 1500 });
+  }).toPass({ timeout: 20_000 });
+}
+
+/** Records every data-pointing value from now on (the headset pointer's path). */
+const startPointingLog = (page: Page) =>
+  page.evaluate(() => {
+    const el = document.querySelector(".xr-session")!;
+    const log: string[] = [];
+    (window as unknown as { __pointingLog: string[] }).__pointingLog = log;
+    new MutationObserver(() => log.push(el.getAttribute("data-pointing") ?? "")).observe(el, {
+      attributes: true,
+      attributeFilter: ["data-pointing"],
+    });
+  });
+const pointingLog = (page: Page) =>
+  page.evaluate(() => (window as unknown as { __pointingLog: string[] }).__pointingLog);
 
 /** Every video the page has made: its source path and whether it is playing. */
 const videos = (page: Page) =>
@@ -135,16 +196,26 @@ async function questPage(browser: Browser, input: Input) {
     await context.addInitScript({ content: "window.__xrDevice && (window.__xrDevice.primaryInputMode = 'hand');" });
   const page = await context.newPage();
   const xrChunks: string[] = [];
+  const profiles: string[] = [];
   page.on("response", async (res) => {
+    if (/\/xr\/profiles\/[^/]+\/profile\.json$/.test(res.url())) profiles.push(res.url());
     if (res.request().resourceType() !== "script") return;
     if ((await res.text().catch(() => "")).includes("offerSession")) xrChunks.push(res.url());
   });
-  return { context, page, xrChunks };
+  /**
+   * Inputs can select once they exist. A controller joins the session only after its layout
+   * (profile.json, served from this site) has loaded; hands join at once.
+   */
+  const inputsReady = async () => {
+    if (input === "controller") await expect.poll(() => profiles.length).toBeGreaterThan(0);
+    await frames(page, 5);
+  };
+  return { context, page, xrChunks, inputsReady };
 }
 
 for (const input of ["controller", "hand"] as const) {
   test(`in an emulated Quest 3 (${input}): enter, pull cards, one video at a time, exit`, async ({ browser }) => {
-    const { context, page, xrChunks } = await questPage(browser, input);
+    const { context, page, xrChunks, inputsReady } = await questPage(browser, input);
     await page.goto("/case");
     const enter = page.getByRole("button", { name: "Enter VR" });
     await expect(enter).toBeVisible();
@@ -158,52 +229,45 @@ for (const input of ["controller", "hand"] as const) {
     const status = page.getByRole("status");
     await expect(status).toHaveText("In VR", { timeout: 15_000 });
     expect(xrChunks.length, "the XR chunk loads on the press").toBeGreaterThan(0);
-    await page.waitForTimeout(500); // the case is placed on the first tracked frame
+    await inputsReady();
 
     // Pull the Instanter card: its loop plays.
-    await aim(page, input, slotCentre("instanter"));
-    await select(page, input);
-    await expect(status).toHaveText("Instanter card open");
+    await selectUntil(page, input, slot("instanter"), "Instanter card open");
     await expect.poll(() => videos(page)).toEqual([{ src: "/loops/instanter.mp4", playing: true }]);
 
-    // The open card blocks the slots behind it: this ray, through the card's centre, would
-    // otherwise go on into A2 and open Glare Zone.
+    // The open card blocks the slots behind it: this ray, through the card's centre, lands on
+    // the card (it would otherwise go on into A2), and selecting there changes nothing.
     await page.waitForTimeout(600); // the card finishes sliding out
-    await aim(page, input, cardCentre);
+    await aim(page, input, CARD);
     await select(page, input);
     await expect(status).toHaveText("Instanter card open");
 
     // Close puts it back and stops the loop.
-    await aim(page, input, closeButton);
-    await select(page, input);
-    await expect(status).toHaveText("In VR");
+    await selectUntil(page, input, CLOSE_BUTTON, "In VR");
     await expect.poll(() => videos(page)).toEqual([{ src: null, playing: false }]);
 
-    // The put-away card takes no selects, even while it is still sliding back in front of
-    // its slot: the slot opens again at once.
-    await aim(page, input, slotCentre("instanter"));
+    // The put-away card takes no pointers, even while it is still sliding back in front of
+    // its slot: aimed at the slot straight after Close, the ray reaches the slot without ever
+    // landing on "card". (Read before the select: the card that select opens may then pass
+    // under the ray, which is right for an open card.)
+    await startPointingLog(page);
+    await aim(page, input, slot("instanter"));
+    const path = await pointingLog(page);
+    expect(path, `the closed card caught the pointer: ${path.join(" > ")}`).not.toContain("card");
     await select(page, input);
     await expect(status).toHaveText("Instanter card open");
     await page.waitForTimeout(600);
-    await aim(page, input, closeButton);
-    await select(page, input);
-    await expect(status).toHaveText("In VR");
+    await selectUntil(page, input, CLOSE_BUTTON, "In VR");
 
     // Pull Aloud, then Case Light (reaching past the open card): one video, switched.
-    await aim(page, input, slotCentre("aloud"));
-    await select(page, input);
-    await expect(status).toHaveText("Aloud card open");
+    await selectUntil(page, input, slot("aloud"), "Aloud card open");
     await expect.poll(() => videos(page)).toEqual([{ src: "/loops/aloud.mp4", playing: true }]);
     await page.waitForTimeout(600);
-    await aim(page, input, slotCentre("case-light"), LEFT);
-    await select(page, input);
-    await expect(status).toHaveText("Case Light card open");
+    await selectUntil(page, input, slot("case-light"), "Case Light card open", LEFT);
     await expect.poll(() => videos(page)).toEqual([{ src: "/loops/case-light.mp4", playing: true }]);
 
     // Exit: back on the page, focus on Enter VR, nothing left playing.
-    await aim(page, input, onCase(0, EXIT_Y));
-    await select(page, input);
-    await expect(status).toHaveText("Left VR");
+    await selectUntil(page, input, EXIT, "Left VR");
     await expect(enter).toBeFocused();
     await expect.poll(() => videos(page)).toEqual([{ src: null, playing: false }]);
     await context.close();
@@ -211,17 +275,39 @@ for (const input of ["controller", "hand"] as const) {
 }
 
 test("with ?xrstats=1 (the frame-rate readout) the headset session runs and closes without errors", async ({ browser }) => {
-  const { context, page } = await questPage(browser, "controller");
+  const { context, page, inputsReady } = await questPage(browser, "controller");
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/case?xrstats=1");
   await page.getByRole("button", { name: "Enter VR" }).click();
   const status = page.getByRole("status");
   await expect(status).toHaveText("In VR", { timeout: 15_000 });
+  await inputsReady();
   await page.waitForTimeout(1200); // the readout updates every half second
-  await aim(page, "controller", onCase(0, EXIT_Y));
-  await select(page, "controller");
-  await expect(status).toHaveText("Left VR");
+  await selectUntil(page, "controller", EXIT, "Left VR");
   expect(errors).toEqual([]);
+  await context.close();
+});
+
+test("in an emulated Quest 3: leave and enter again from the same page, then pull a card", async ({ browser }) => {
+  const { context, page, xrChunks, inputsReady } = await questPage(browser, "controller");
+  await page.goto("/case");
+  const enter = page.getByRole("button", { name: "Enter VR" });
+  const status = page.getByRole("status");
+  await enter.click();
+  await expect(status).toHaveText("In VR", { timeout: 15_000 });
+  await inputsReady();
+  await selectUntil(page, "controller", EXIT, "Left VR");
+  const chunksAfterFirst = xrChunks.length;
+
+  // The second press asks at once (the session stayed loaded), and loads nothing more.
+  await enter.click();
+  await expect(status).toHaveText("In VR", { timeout: 15_000 });
+  expect(xrChunks.length).toBe(chunksAfterFirst);
+  await inputsReady();
+  await selectUntil(page, "controller", slot("instanter"), "Instanter card open");
+  await expect.poll(() => videos(page)).toEqual([{ src: "/loops/instanter.mp4", playing: true }]);
+  await selectUntil(page, "controller", EXIT, "Left VR");
+  await expect.poll(() => videos(page)).toEqual([{ src: null, playing: false }]);
   await context.close();
 });

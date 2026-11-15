@@ -78,33 +78,34 @@ describe("XrDoor", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Instanter card open");
   });
 
-  it("closes the session and returns focus to Enter VR when the session ends", async () => {
+  it("returns focus to Enter VR when the session ends, and keeps the session loaded", async () => {
     render(door(fakeSession((p) => (p.onStarted(), p.onEnded("ended")))));
     await flush();
     fireEvent.click(screen.getByRole("button", { name: "Enter VR" }));
     await flush();
     await flush();
-    expect(screen.queryByTestId("session")).toBeNull();
     expect(screen.getByRole("button", { name: "Enter VR" })).toHaveFocus();
     expect(screen.getByRole("status")).toHaveTextContent("Left VR");
+    expect(screen.getByTestId("session")).toBeInTheDocument();
   });
 
-  it("when the browser refuses the session, a second press enters without loading again", async () => {
-    let attempt = 0;
-    const load = fakeSession((p) => (++attempt === 1 ? p.onEnded("blocked") : p.onStarted()));
+  it("enters again from a later press, synchronously inside that press, without loading again", async () => {
+    // WebKit grants a session only inside the user's gesture, so a later press must ask at once.
+    const enterAgain = vi.fn();
+    const load = fakeSession((p) => {
+      p.onReady(enterAgain);
+      p.onEnded("blocked");
+    });
     render(door(load));
     await flush();
     fireEvent.click(screen.getByRole("button", { name: "Enter VR" }));
     await flush();
     await flush();
-    expect(screen.queryByTestId("session")).toBeNull();
     expect(screen.getByRole("status")).toHaveTextContent("Press Enter VR again");
     fireEvent.click(screen.getByRole("button", { name: "Enter VR" }));
-    await flush();
-    await flush();
+    expect(enterAgain).toHaveBeenCalledTimes(1); // no await between the press and the request
     expect(load).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId("session")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("In VR");
+    expect(screen.getByRole("status")).toHaveTextContent("Entering VR");
   });
 
   it("says so when the session cannot start at all, and keeps the page usable", async () => {
@@ -113,8 +114,8 @@ describe("XrDoor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Enter VR" }));
     await flush();
     await flush();
-    expect(screen.queryByTestId("session")).toBeNull();
     expect(screen.getByRole("status")).toHaveTextContent("VR could not start");
+    expect(screen.getByRole("button", { name: "Enter VR" })).toBeEnabled();
   });
 });
 

@@ -2,7 +2,7 @@
 // so none of this, @react-three/xr or troika, is in any page's first load.
 import { Canvas, useFrame } from "@react-three/fiber";
 import { XR, XROrigin, createXRStore, type XRStore } from "@react-three/xr";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { featured } from "@/content";
 import specJson from "@/scene/case-spec.json";
@@ -16,7 +16,9 @@ import { createFrameStats, statsText, wantsStats } from "./frameStats";
 import { FONT_REGULAR, Label } from "./Label";
 import { slotLabels, LABEL_SIZE } from "./labels";
 import { pickPlanes, placeCase } from "./placement";
-import type { XrEndReason, XrSessionProps } from "./types";
+import { createEntry } from "./entry";
+import { createPointing, type Pointing } from "./pointing";
+import type { XrSessionProps } from "./types";
 import { createVideoController } from "./video";
 
 const layout = buildLayout(specJson);
@@ -54,33 +56,44 @@ function makeStore(origin: string): XRStore {
   });
 }
 
-function reasonOf(error: unknown): XrEndReason {
-  const name = error instanceof Error || error instanceof DOMException ? error.name : "";
-  return name === "SecurityError" || name === "NotAllowedError" ? "blocked" : "failed";
-}
-
-/** Starts the session once <XR> is mounted, and reports how it ends. */
-function Session({ store, onStarted, onEnded }: { store: XRStore } & Omit<XrSessionProps, "onCard">) {
-  const asked = useRef(false);
-  const callbacks = useRef({ onStarted, onEnded });
+/**
+ * Asks for VR once mounted (that is the first Enter VR press), hands the door a way to ask
+ * again from a later press, and reports how each session ends. The door keeps this mounted
+ * between visits; only a real unmount (leaving the page) releases it, which ends a running
+ * session and any session the browser grants afterwards.
+ */
+function Session({ store, onEnded, onReady }: { store: XRStore } & Pick<XrSessionProps, "onEnded" | "onReady">) {
+  const callbacks = useRef({ onEnded, onReady });
   useEffect(() => {
-    callbacks.current = { onStarted, onEnded };
+    callbacks.current = { onEnded, onReady };
   });
+  const entry = useRef<ReturnType<typeof createEntry> | null>(null);
+  const asked = useRef(false);
+  const pendingRelease = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Subscribe before entering, and on every mount (dev strict mode mounts twice).
   useEffect(() => store.onSessionEnd(() => callbacks.current.onEnded("ended")), [store]);
 
   useEffect(() => {
-    if (asked.current) return;
-    asked.current = true;
-    store.enterVR().then(
-      (session) => (session ? callbacks.current.onStarted() : callbacks.current.onEnded("failed")),
-      (error) => callbacks.current.onEnded(reasonOf(error)),
-    );
+    // Dev strict mode runs cleanup and setup back to back: keep the entry in that case.
+    if (pendingRelease.current) clearTimeout(pendingRelease.current);
+    pendingRelease.current = null;
+    const current = (entry.current ??= createEntry(store, {
+      // "In VR" is announced by the case once it is placed, not when the session is granted.
+      onStarted: () => {},
+      onEnded: (reason) => callbacks.current.onEnded(reason),
+    }));
+    callbacks.current.onReady(current.enter);
+    if (!asked.current) {
+      asked.current = true;
+      current.enter();
+    }
+    return () => {
+      pendingRelease.current = setTimeout(() => {
+        current.release();
+        void store.getState().session?.end();
+      }, 0);
+    };
   }, [store]);
-
-  // Leaving the page (or the door unmounting) ends a running session.
-  useEffect(() => () => void store.getState().session?.end(), [store]);
   return null;
 }
 
@@ -110,7 +123,20 @@ function Stats({ store }: { store: XRStore }) {
 }
 
 /** The case, its slot targets, labels and the exit, placed in front of the viewer. */
-function HeadsetCase({ store, onCard, showStats }: { store: XRStore; onCard: XrSessionProps["onCard"]; showStats: boolean }) {
+function HeadsetCase({
+  store,
+  onCard,
+  onPlaced,
+  pointing,
+  showStats,
+}: {
+  store: XRStore;
+  onCard: XrSessionProps["onCard"];
+  /** Called each time the case is placed in front of the reader (once per session). */
+  onPlaced: () => void;
+  pointing: Pointing;
+  showStats: boolean;
+}) {
   const group = useRef<THREE.Group>(null);
   const placed = useRef(false);
   const rig = useRef<CaseRig | null>(null);
@@ -120,23 +146,41 @@ function HeadsetCase({ store, onCard, showStats }: { store: XRStore; onCard: XrS
   const [lastOpened, setLastOpened] = useState<string | null>(null);
   const selectedRef = useRef<string | null>(null);
   const onCardRef = useRef(onCard);
+  const onPlacedRef = useRef(onPlaced);
   useEffect(() => {
     onCardRef.current = onCard;
+    onPlacedRef.current = onPlaced;
   });
 
   // The session's one video element and its texture (design brief: one video at a time).
+  // The texture is made and disposed by the same effect, so each setup has a live one.
   const video = useMemo(() => createVideoController(), []);
-  const texture = useMemo(() => {
+  const texture = useRef<THREE.VideoTexture | null>(null);
+  useEffect(() => {
     const t = new THREE.VideoTexture(video.element() as HTMLVideoElement);
     t.colorSpace = THREE.SRGBColorSpace;
-    return t;
+    texture.current = t;
+    return () => {
+      t.dispose();
+      if (texture.current === t) texture.current = null;
+    };
   }, [video]);
+  const getTexture = useCallback(() => texture.current, []);
+  useEffect(() => () => video.stop(), [video]);
+
+  // When a session ends, the next one starts fresh: placed again from the new head pose,
+  // with no card out (which also stops the video).
   useEffect(
-    () => () => {
-      video.stop();
-      texture.dispose();
-    },
-    [video, texture],
+    () =>
+      store.subscribe((state, prev) => {
+        if (!prev.session || state.session) return;
+        placed.current = false;
+        if (group.current) group.current.visible = false;
+        hovered.current = null;
+        selectedRef.current = null;
+        setSelected(null);
+      }),
+    [store],
   );
 
   useEffect(() => {
@@ -171,6 +215,7 @@ function HeadsetCase({ store, onCard, showStats }: { store: XRStore; onCard: XrS
         group.current.rotation.set(0, p.rotationY, 0);
         group.current.visible = true;
         placed.current = true;
+        onPlacedRef.current();
       }
     }
     rig.current?.step(hovered.current ?? selectedRef.current, dt);
@@ -193,8 +238,14 @@ function HeadsetCase({ store, onCard, showStats }: { store: XRStore; onCard: XrS
           name={`slot:${p.slug}`}
           position={[p.x, p.y, p.z]}
           pointerEventsType={{ deny: "grab" }}
-          onPointerOver={() => (hovered.current = p.slug)}
-          onPointerOut={() => hovered.current === p.slug && (hovered.current = null)}
+          onPointerOver={() => {
+            hovered.current = p.slug;
+            pointing.over(p.slug);
+          }}
+          onPointerOut={() => {
+            if (hovered.current === p.slug) hovered.current = null;
+            pointing.out(p.slug);
+          }}
           onClick={() => select(p.slug)}
         >
           <planeGeometry args={[p.w, p.h]} />
@@ -215,6 +266,8 @@ function HeadsetCase({ store, onCard, showStats }: { store: XRStore; onCard: XrS
         position={[0, EXIT.y, layout.depth / 2]}
         pointerEventsType={{ deny: "grab" }}
         onClick={() => void store.getState().session?.end()}
+        onPointerOver={() => pointing.over("exit")}
+        onPointerOut={() => pointing.out("exit")}
       >
         <planeGeometry args={[EXIT.w, EXIT.h]} />
         <meshBasicMaterial color="#1b1d22" />
@@ -225,8 +278,9 @@ function HeadsetCase({ store, onCard, showStats }: { store: XRStore; onCard: XrS
         from={selectedFrom(lastOpened)}
         to={CARD_REST}
         video={video}
-        texture={texture}
+        texture={getTexture}
         onClose={() => select(null)}
+        pointing={pointing}
       />
       {showStats && <Stats store={store} />}
     </group>
@@ -237,19 +291,23 @@ function HeadsetCase({ store, onCard, showStats }: { store: XRStore; onCard: XrS
  * The headset mode: a 2 px, invisible canvas on the page (the headset gets its own frames),
  * an XR store, and the case placed 1 m in front of the viewer.
  */
-export default function XrSession({ onStarted, onEnded, onCard }: XrSessionProps) {
+export default function XrSession({ onStarted, onEnded, onCard, onReady }: XrSessionProps) {
   const [store] = useState(() => makeStore(window.location.origin));
   const [showStats] = useState(() => wantsStats(window.location.search));
+  // The page element that carries data-pointing (see ./pointing).
+  const [wrapper, setWrapper] = useState<HTMLDivElement | null>(null);
+  const pointing = useMemo(() => createPointing(wrapper), [wrapper]);
   return (
-    <div className="xr-session" aria-hidden="true">
-      <Canvas flat dpr={1} gl={{ antialias: true }}>
+    <div ref={setWrapper} className="xr-session" aria-hidden="true" data-pointing="">
+      {/* demand: idle between visits; the headset session drives its own frames. */}
+      <Canvas flat dpr={1} frameloop="demand" gl={{ antialias: true }}>
         <XR store={store}>
           <color attach="background" args={[SPACE]} />
           <ambientLight intensity={1.4} />
           <directionalLight position={[0.6, 1.2, 2]} intensity={2} />
           <XROrigin />
-          <HeadsetCase store={store} onCard={onCard} showStats={showStats} />
-          <Session store={store} onStarted={onStarted} onEnded={onEnded} />
+          <HeadsetCase store={store} onCard={onCard} onPlaced={onStarted} pointing={pointing} showStats={showStats} />
+          <Session store={store} onEnded={onEnded} onReady={onReady} />
         </XR>
       </Canvas>
     </div>

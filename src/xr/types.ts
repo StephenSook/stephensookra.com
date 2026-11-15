@@ -12,4 +12,7 @@ export type XrSessionProps = {
   /** The project whose card is open in the headset, or null when none is. The title comes
    * from the session (which has the content), so the page's door never imports it. */
   onCard: (card: { slug: string; title: string } | null) => void;
+  /** Once mounted, the session hands the door a function that asks for VR at once. The door
+   * calls it from a later press, inside that press (WebKit requires the user's gesture). */
+  onReady: (enter: () => void) => void;
 };

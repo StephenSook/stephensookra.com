@@ -6,6 +6,7 @@ import { damp } from "@/scene/damping";
 import { cardText, fitBox } from "./card";
 import { CLOSE, PANEL, VIDEO_BOX } from "./cardLayout";
 import { FONT_REGULAR, Label } from "./Label";
+import type { Pointing } from "./pointing";
 import type { VideoController } from "./video";
 
 const TEXT_X = -0.005;
@@ -23,8 +24,10 @@ export type CardPanelProps = {
   from: Vec3;
   to: Vec3;
   video: VideoController;
-  texture: THREE.Texture;
+  /** The session's video texture (made and disposed by one effect, so read it per frame). */
+  texture: () => THREE.Texture | null;
   onClose: () => void;
+  pointing: Pointing;
 };
 
 /**
@@ -32,8 +35,9 @@ export type CardPanelProps = {
  * headset, made by the reader's own select. It blocks pointers to the slots behind it,
  * so a select on the card never opens a slot through it.
  */
-export function CardPanel({ project, from, to, video, texture, onClose }: CardPanelProps) {
+export function CardPanel({ project, from, to, video, texture, onClose, pointing }: CardPanelProps) {
   const group = useRef<THREE.Group>(null);
+  const videoMaterial = useRef<THREE.MeshBasicMaterial>(null);
   const progress = useRef(0);
   // Keep showing the last card while it slides back into its slot.
   const [shown, setShown] = useState<Project | null>(project);
@@ -60,6 +64,12 @@ export function CardPanel({ project, from, to, video, texture, onClose }: CardPa
   const toV = useMemo(() => new THREE.Vector3(...to), [to]);
 
   useFrame((_s, dt) => {
+    const material = videoMaterial.current;
+    const t = texture();
+    if (material && material.map !== t) {
+      material.map = t;
+      material.needsUpdate = true;
+    }
     const g = group.current;
     if (!g) return;
     const target = project ? 1 : 0;
@@ -75,14 +85,20 @@ export function CardPanel({ project, from, to, video, texture, onClose }: CardPa
   return (
     <group ref={group} visible={false}>
       {/* "auto": the card blocks pointers to the slots behind it, though it has no handler. */}
-      <mesh name="card" pointerEvents={open ? "auto" : "none"} pointerEventsType={{ deny: "grab" }}>
+      <mesh
+        name="card"
+        pointerEvents={open ? "auto" : "none"}
+        pointerEventsType={{ deny: "grab" }}
+        onPointerOver={() => pointing.over("card")}
+        onPointerOut={() => pointing.out("card")}
+      >
         <planeGeometry args={[PANEL.w, PANEL.h]} />
         <meshBasicMaterial color="#17191e" />
       </mesh>
       {size && (
         <mesh position={[VIDEO_BOX.x, 0, 0.001]}>
           <planeGeometry args={[size.w, size.h]} />
-          <meshBasicMaterial map={texture} toneMapped={false} />
+          <meshBasicMaterial ref={videoMaterial} color="#ffffff" toneMapped={false} />
         </mesh>
       )}
       <Label text={card.title} size={0.03} position={[TEXT_X, 0.13, 0.002]} anchorY="top" maxWidth={TEXT_W} />
@@ -102,6 +118,8 @@ export function CardPanel({ project, from, to, video, texture, onClose }: CardPa
         pointerEvents={open ? "listener" : "none"}
         pointerEventsType={{ deny: "grab" }}
         onClick={onClose}
+        onPointerOver={() => pointing.over("close")}
+        onPointerOut={() => pointing.out("close")}
       >
         <planeGeometry args={[CLOSE.w, CLOSE.h]} />
         <meshBasicMaterial color="#2a2d34" />
