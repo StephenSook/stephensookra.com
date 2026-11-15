@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { AwardsList } from "@/components/AwardsList";
+import { CaseLightBridge } from "@/components/CaseLightBridge";
+import { CasePoster } from "@/components/CasePoster";
+import { CaseStage } from "@/components/CaseStage";
 import { ProjectRow } from "@/components/ProjectRow";
 import { archive, awards, bench, featured, profile, proofLine } from "@/content";
 import { getRepoStatuses } from "@/lib/github";
@@ -13,7 +16,7 @@ export default async function Home() {
   const statuses = await getRepoStatuses(featured.flatMap((p) => (p.repo ? [p.repo] : [])));
 
   return (
-    <>
+    <CaseLightBridge>
       <section className="frame hero" aria-labelledby="name">
         <h1 id="name" className="hero__name">
           {profile.name}
@@ -46,6 +49,13 @@ export default async function Home() {
         </ul>
       </section>
 
+      {/* The 3D case on wide screens (after first paint), its poster everywhere else. */}
+      <div className="frame">
+        <CaseStage variant="hero">
+          <CasePoster />
+        </CaseStage>
+      </div>
+
       <div className="frame">
         <div className="case">
           <ProjectRow id="xr" letter="A" heading="XR work" projects={xr} statuses={statuses} />
@@ -76,6 +86,6 @@ export default async function Home() {
           <a href={profile.links.linkedin}>LinkedIn</a>.
         </p>
       </section>
-    </>
+    </CaseLightBridge>
   );
 }

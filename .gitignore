@@ -46,5 +46,8 @@ next-env.d.ts
 /blob-report/
 /.lighthouseci/
 
+# generated inputs and raw renders for the Blender poster script
+/scripts/blender/out/
+
 # local assistant notes
 CLAUDE.local.md

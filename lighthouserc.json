@@ -9,7 +9,8 @@
         "http://localhost:3200/work/case-light",
         "http://localhost:3200/resume",
         "http://localhost:3200/about",
-        "http://localhost:3200/proof"
+        "http://localhost:3200/proof",
+        "http://localhost:3200/case"
       ],
       "numberOfRuns": 3,
       "settings": {

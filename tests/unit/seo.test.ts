@@ -7,7 +7,7 @@ import { featured, profile } from "@/content";
 const BASE = "https://stephensookra.com";
 
 describe("sitemap", () => {
-  it("lists every public page and leaves out the /case placeholder", () => {
+  it("lists every public page, including the full-screen case", () => {
     const urls = sitemap().map((e) => e.url);
     expect(urls).toEqual([
       `${BASE}/`,
@@ -18,6 +18,7 @@ describe("sitemap", () => {
       `${BASE}/resume`,
       `${BASE}/about`,
       `${BASE}/proof`,
+      `${BASE}/case`,
     ]);
   });
 });
