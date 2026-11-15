@@ -1,0 +1,35 @@
+name: Links
+
+# Every outside link on the site: Try links must pass their core-path check (a route
+# past the home page), repos must be public, films must be public. Runs on every push
+# and pull request, and daily, because live apps can break without a commit here.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 11 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: links-${{ github.ref }}-${{ github.ref == 'refs/heads/main' && github.sha || '' }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  links:
+    name: links (Try core paths, repos, films)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run links
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

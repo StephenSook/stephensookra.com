@@ -27,6 +27,17 @@ const devpost = (slug: string): ProjectLink => ({
   url: `https://devpost.com/software/${slug}`,
   label: "Devpost page",
 });
+/**
+ * A live demo link. It is listed only with a check: a GET past the home page whose
+ * body contains `expectText` only when the core of the app works. Checks were found
+ * and run on 2026-11-15; tests/links re-runs them on every push and daily.
+ */
+const tryIt = (url: string, checkUrl: string, expectText: string): ProjectLink => ({
+  kind: "try",
+  url,
+  label: "Try it live",
+  check: { url: checkUrl, expectText },
+});
 
 export const projects: Project[] = [
   // ---------------------------------------------------------------- XR row
@@ -167,7 +178,12 @@ export const projects: Project[] = [
       "varsity",
       "Title frame of the VARSITY film: a stadium at night with the offside line drawn on the pitch.",
     ),
-    links: [repo("varsity"), film("7e88hmX8Puw")],
+    links: [
+      // The backend's signed-corpus check: real backend computation, no model call.
+      tryIt("https://web-chi-wine-13.vercel.app", "https://varsity-api.onrender.com/corpus_integrity", '"verified":true'),
+      repo("varsity"),
+      film("7e88hmX8Puw"),
+    ],
     caseStudy: {
       evidence:
         "Grand Prize and Most Innovative at the IBM SkillsBuild AI Builders Challenge, against 98 teams.",
@@ -208,7 +224,17 @@ export const projects: Project[] = [
       "instanter",
       "Title frame of the Instanter film: 4 of 46 Georgia eviction deadlines are ones counting seven days by hand gets wrong.",
     ),
-    links: [repo("instanter"), film("AyvxUeE9sCs"), devpost("instanter")],
+    links: [
+      // Re-runs the deadline engine on every request.
+      tryIt(
+        "https://d2ew2t4uldglcr.cloudfront.net",
+        "https://d2ew2t4uldglcr.cloudfront.net/api/stats",
+        '"deadlines_computed": 46',
+      ),
+      repo("instanter"),
+      film("AyvxUeE9sCs"),
+      devpost("instanter"),
+    ],
     caseStudy: {
       evidence: "Silver Agent and $3,000 in the Professional track of AWS Agents for Humans. Built solo.",
       myPart: "Solo build: the agent graph, the deadline engine, the AWS stack, and the iOS and Android apps.",
@@ -245,7 +271,13 @@ export const projects: Project[] = [
     result: { state: "placed", prize: "1st of 238, $5,000", event: "YouCam API Hackathon", source: RESUME },
     repo: "StephenSook/aloud",
     poster: poster("aloud", "Frame from the Aloud film: Stephen takes a selfie on an iPhone, framed by sound alone."),
-    links: [repo("aloud"), film("2rPntXmDqHQ"), devpost("aloud-lxqr70")],
+    links: [
+      // A product read: a live Open Beauty Facts lookup turned into the spoken summary.
+      tryIt("https://aloudbeauty.vercel.app", "https://aloudbeauty.vercel.app/api/product/3337875597197", '"status":"found"'),
+      repo("aloud"),
+      film("2rPntXmDqHQ"),
+      devpost("aloud-lxqr70"),
+    ],
     caseStudy: {
       evidence: "1st of 238 submissions and $5,000 at the YouCam API hackathon (Perfect Corp).",
       // myPart omitted: the sources do not say who built what (open item for Stephen).
@@ -280,7 +312,12 @@ export const projects: Project[] = [
     order: 1,
     result: { state: "placed", prize: "$5,000 Visa track", event: "HackGT 13", source: RESUME },
     repo: "StephenSook/secondhand-safe",
-    links: [repo("secondhand-safe"), film("bLZc5eh2kqc")],
+    links: [
+      // The recall lookup behind the held payment.
+      tryIt("https://lullabuy.tech", "https://lullabuy.tech/api/check?model=BHC001&batch=202408", '"kind":"RECALL_MATCH"'),
+      repo("secondhand-safe"),
+      film("bLZc5eh2kqc"),
+    ],
   },
   {
     slug: "hold",
@@ -297,7 +334,16 @@ export const projects: Project[] = [
       source: { label: "Resume, commit 4ac027c; field size from the organizer winner email" },
     },
     repo: "StephenSook/hold",
-    links: [repo("hold"), film("Of5Z7NGjGSI")],
+    links: [
+      // Re-checks all 70 rule citations on every request (the solver itself is POST only).
+      tryIt(
+        "https://hold-fwmdq7fc3q-uc.a.run.app",
+        "https://hold-fwmdq7fc3q-uc.a.run.app/api/rules",
+        '"verification_problems":[]',
+      ),
+      repo("hold"),
+      film("Of5Z7NGjGSI"),
+    ],
   },
   {
     slug: "throughline",
@@ -308,7 +354,16 @@ export const projects: Project[] = [
     order: 3,
     result: { state: "placed", prize: "Best Use of Gemma 4", event: "Hack RenderATL", source: RESUME },
     repo: "StephenSook/throughline",
-    links: [repo("throughline"), film("hB_IVUN7gCo")],
+    links: [
+      // The backend reconciles against five live public sources.
+      tryIt(
+        "https://throughline-web-gkay.onrender.com",
+        "https://throughline-api-yo1p.onrender.com/api/summary",
+        '"sources_ok":5,"sources_total":5',
+      ),
+      repo("throughline"),
+      film("hB_IVUN7gCo"),
+    ],
   },
   {
     slug: "loka-pay",
@@ -360,7 +415,16 @@ export const projects: Project[] = [
     // Winners are announced Dec 21, 2026 (Stephen's records)
     result: { state: "waiting", event: "PayPal AI Hackathon", resultsDate: "2026-12-21", source: { label: "Event page" } },
     repo: "StephenSook/recall-reach",
-    links: [repo("recall-reach"), film("SJHaOFci2Fk")],
+    links: [
+      // Health route that queries the database and reports CPSC poll freshness.
+      tryIt(
+        "https://recall-reach-web-e022.onrender.com/judge",
+        "https://recall-reach-web-e022.onrender.com/api/health",
+        '"checks":{"database":true',
+      ),
+      repo("recall-reach"),
+      film("SJHaOFci2Fk"),
+    ],
   },
   {
     slug: "chat-vs-codex",

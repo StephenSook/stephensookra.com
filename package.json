@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "measure:fcp": "node scripts/measure-fcp.mjs",
     "stills": "node scripts/stills.mjs",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "links": "vitest run --config vitest.links.config.mts"
   },
   "dependencies": {
     "next": "16.4.6",
