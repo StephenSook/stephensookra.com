@@ -133,10 +133,9 @@ describe("headset test record", () => {
   };
 
   it("needs a date, evidence, what ran and what did not for a partial run", () => {
-    const { ran: _ran, ...noRan } = partial;
-    expect(() => xrTestsSchema.parse({ ...notRun, androidXrEmulator: { name: "Android XR Emulator", ...noRan } })).toThrow();
-    const { date: _date, ...noDate } = partial;
-    expect(() => xrTestsSchema.parse({ ...notRun, androidXrEmulator: { name: "Android XR Emulator", ...noDate } })).toThrow();
+    const without = (key: keyof typeof partial) => ({ ...partial, [key]: undefined });
+    expect(() => xrTestsSchema.parse({ ...notRun, androidXrEmulator: { name: "Android XR Emulator", ...without("ran") } })).toThrow();
+    expect(() => xrTestsSchema.parse({ ...notRun, androidXrEmulator: { name: "Android XR Emulator", ...without("date") } })).toThrow();
     expect(() => xrTestsSchema.parse({ ...notRun, androidXrEmulator: { name: "Android XR Emulator", ...partial } })).not.toThrow();
   });
 
