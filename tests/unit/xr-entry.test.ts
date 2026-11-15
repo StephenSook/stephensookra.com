@@ -94,3 +94,59 @@ describe("createEntry", () => {
     expect(store.enterVR).toHaveBeenCalledTimes(1);
   });
 });
+
+/**
+ * Like the real store: asks the browser (the given xr) synchronously, then sets up the
+ * renderer, which can still fail after the browser has granted the session.
+ */
+function storeOverXr(xr: { requestSession: (mode: string) => Promise<unknown> }) {
+  let failSetup: (e: unknown) => void = () => {};
+  let passSetup: () => void = () => {};
+  const enterVR = vi.fn(async () => {
+    const granted = await xr.requestSession("immersive-vr");
+    await new Promise<void>((resolve, reject) => {
+      passSetup = resolve;
+      failSetup = reject;
+    });
+    return granted;
+  });
+  return { enterVR, failSetup: (e: unknown) => failSetup(e), passSetup: () => passSetup() };
+}
+
+describe("createEntry, when renderer setup fails after the browser granted a session", () => {
+  it("ends the granted session after release, though the store never returned it", async () => {
+    const granted = session();
+    const xr = { requestSession: vi.fn(async () => granted) };
+    const store = storeOverXr(xr);
+    const cb = { onStarted: vi.fn(), onEnded: vi.fn() };
+    const entry = createEntry(store, cb, xr);
+    entry.enter();
+    entry.release(); // the reader left (a link inside the site) while the browser asked
+    await flush();
+    store.failSetup(new Error("WebGL context was disposed"));
+    await flush();
+    expect(granted.end).toHaveBeenCalledTimes(1);
+    expect(cb.onEnded).not.toHaveBeenCalled();
+  });
+
+  it("ends the granted session and reports failed while the page is still there", async () => {
+    const granted = session();
+    const xr = { requestSession: vi.fn(async () => granted) };
+    const store = storeOverXr(xr);
+    const cb = { onStarted: vi.fn(), onEnded: vi.fn() };
+    createEntry(store, cb, xr).enter();
+    await flush();
+    store.failSetup(new Error("context lost"));
+    await flush();
+    expect(granted.end).toHaveBeenCalledTimes(1);
+    expect(cb.onEnded).toHaveBeenCalledWith("failed");
+  });
+
+  it("leaves the browser's own requestSession in place once the call returns", () => {
+    const original = vi.fn(async () => session());
+    const xr = { requestSession: original };
+    createEntry(storeOverXr(xr), { onStarted: vi.fn(), onEnded: vi.fn() }, xr).enter();
+    expect(xr.requestSession).toBe(original);
+    expect(original).toHaveBeenCalledTimes(1);
+  });
+});
