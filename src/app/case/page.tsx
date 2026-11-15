@@ -31,6 +31,8 @@ export default function CasePage() {
         <CaseStage variant="full">
           <CasePoster />
         </CaseStage>
+      </div>
+      <div className="frame">
         <XrDoor note={doorNote(xrTests)} />
       </div>
       <div className="frame section">
