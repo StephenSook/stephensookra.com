@@ -1,5 +1,5 @@
 // Imported only through the client CaseStage, so it may take function props (test seams).
-import { useCallback, useEffect, useState, type ComponentType } from "react";
+import { Component, useCallback, useEffect, useState, type ComponentType, type ReactNode } from "react";
 import type { CaseSceneProps } from "@/scene/CaseScene";
 import { useCaseLight } from "@/scene/caseLight";
 import { afterLoadAndIdle, onSceneEnvChange, readSceneEnv, shouldLoadScene, type SceneEnv } from "@/scene/gate";
@@ -19,6 +19,27 @@ type Props = {
 };
 
 const importScene = () => import("@/scene/CaseScene");
+
+/**
+ * Keeps a renderer failure (for example WebGL context creation failing after a good probe)
+ * inside the stage: the scene unmounts and the poster stays, instead of the error reaching
+ * the route boundary and taking the grid with it.
+ */
+class SceneBoundary extends Component<{ onError: () => void; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch() {
+    this.props.onError();
+  }
+
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
 
 /**
  * The poster first, then (on wide fine-pointer screens without reduced motion and with
@@ -62,9 +83,10 @@ export function CaseStageView({
     if (!open || lost || Scene) return;
     let cancelled = false;
     waitForIdle()
-      .then(loadScene)
+      // The gate may have closed, or the page gone, while waiting: then three.js never loads.
+      .then(() => (cancelled ? null : loadScene()))
       .then((mod) => {
-        if (!cancelled) setScene(() => mod.default);
+        if (mod && !cancelled) setScene(() => mod.default);
       })
       .catch(() => {
         // A failed chunk load leaves the poster in place.
@@ -86,7 +108,9 @@ export function CaseStageView({
       <div className="case-stage__poster">{children}</div>
       {showScene ? (
         <div className="case-stage__scene">
-          <Scene onReady={handleReady} onContextLost={handleContextLost} />
+          <SceneBoundary onError={handleContextLost}>
+            <Scene onReady={handleReady} onContextLost={handleContextLost} />
+          </SceneBoundary>
         </div>
       ) : null}
     </div>

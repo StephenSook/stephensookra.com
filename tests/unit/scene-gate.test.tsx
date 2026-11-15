@@ -138,6 +138,68 @@ describe("CaseStage", () => {
     expect(seen.size).toBe(2);
   });
 
+  it("falls back to the poster, and keeps the page, when the renderer throws after a good probe", async () => {
+    const Broken = () => {
+      throw new Error("Error creating WebGL context.");
+    };
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { container } = render(
+      <>
+        <CaseStage
+          variant="hero"
+          readEnv={env()}
+          loadScene={async () => ({ default: Broken })}
+          waitForIdle={() => Promise.resolve()}
+        >
+          {poster}
+        </CaseStage>
+        <p>grid stays</p>
+      </>,
+    );
+    await flush();
+    await flush();
+    spy.mockRestore();
+    expect(screen.getByTestId("poster")).toBeInTheDocument();
+    expect(screen.getByText("grid stays")).toBeInTheDocument();
+    expect(container.firstElementChild).toHaveAttribute("data-scene", "poster");
+  });
+
+  it("never imports the scene if the gate closes or the page unmounts while waiting for idle", async () => {
+    for (const leave of ["close", "unmount"] as const) {
+      let release!: () => void;
+      const idle = new Promise<void>((r) => (release = r));
+      const load = vi.fn(async () => ({ default: () => <div /> }));
+      let current = env()();
+      const listeners = new Set<() => void>();
+      const { unmount } = render(
+        <CaseStage
+          variant="hero"
+          readEnv={() => current}
+          onEnvChange={(fn) => {
+            listeners.add(fn);
+            return () => listeners.delete(fn);
+          }}
+          loadScene={load}
+          waitForIdle={() => idle}
+        >
+          {poster}
+        </CaseStage>,
+      );
+      await flush();
+      if (leave === "close") {
+        current = { ...current, reducedMotion: true };
+        act(() => listeners.forEach((fn) => fn()));
+      } else {
+        unmount();
+      }
+      release();
+      await flush();
+      await flush();
+      expect(load, leave).not.toHaveBeenCalled();
+      if (leave === "close") unmount();
+    }
+  });
+
   it("exposes the lit slug for the grid and tests", async () => {
     const { container } = render(
       <CaseStage variant="hero" readEnv={env({ webgl2: false })} loadScene={vi.fn()}>
