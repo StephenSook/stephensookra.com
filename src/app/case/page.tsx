@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CaseLightBridge } from "@/components/CaseLightBridge";
 import { CasePoster } from "@/components/CasePoster";
 import { CaseStage } from "@/components/CaseStage";
+import { XrDoor } from "@/components/XrDoor";
 import { ProjectRow } from "@/components/ProjectRow";
 import { featured } from "@/content";
 
@@ -29,6 +30,7 @@ export default function CasePage() {
         <CaseStage variant="full">
           <CasePoster />
         </CaseStage>
+        <XrDoor />
       </div>
       <div className="frame section">
         <div className="case">
