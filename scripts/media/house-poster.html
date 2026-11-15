@@ -1,0 +1,147 @@
+<!doctype html>
+<!--
+  A project poster in the house style of the film title frames (Case Light, Glare Zone): a
+  dark frame, a large pale-yellow title, a bold white line, a small grey line, and a picture
+  inset on the right in a thin pale-yellow frame with its honesty caption. Without a picture
+  it is a text-only poster.
+  scripts/media/capture-media.mjs fills it from scripts/media/<slug>.json and renders it at
+  2x, then scales it to the posters' 720 by 405. With ?mode=caption it renders only the
+  caption, on a transparent page, for the loop's overlay.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>House poster</title>
+    <style>
+      @font-face {
+        font-family: "Familjen Grotesk";
+        font-weight: 400;
+        src: url("../../public/xr/fonts/familjen-grotesk-latin-400-normal.woff") format("woff");
+      }
+      @font-face {
+        font-family: "Familjen Grotesk";
+        font-weight: 600;
+        src: url("../../public/xr/fonts/familjen-grotesk-latin-600-normal.woff") format("woff");
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      body {
+        width: 720px;
+        height: 405px;
+        background: radial-gradient(ellipse 75% 85% at 38% 50%, #1c1e20 0%, #131517 55%, #0b0d0c 100%);
+        font-family: "Familjen Grotesk", sans-serif;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        align-items: center;
+        column-gap: 24px;
+        /* Wider than the film posters' 34 px: in the case's right-hand slots, the slot's inner
+           wall hides the left edge of the poster from the camera. */
+        padding: 16px 26px 16px 64px;
+      }
+      body.with-shot {
+        grid-template-columns: minmax(0, 1fr) 330px;
+      }
+      .title {
+        color: #f8eaa0;
+        font-weight: 600;
+        font-size: 64px;
+        line-height: 1;
+        letter-spacing: -0.01em;
+      }
+      .line {
+        color: #e3e5e7;
+        font-weight: 600;
+        font-size: 30px;
+        line-height: 1.2;
+        max-width: 540px;
+        margin-top: 18px;
+      }
+      .role {
+        color: #909296;
+        font-size: 16px;
+        margin-top: 18px;
+      }
+      .with-shot .title {
+        font-size: 56px;
+      }
+      .with-shot .line {
+        font-size: 24px;
+        margin-top: 14px;
+      }
+      .with-shot .role {
+        font-size: 14px;
+        margin-top: 14px;
+      }
+      .shot {
+        position: relative;
+        height: 373px;
+        border: 2px solid #ece08f;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #0b0d0c;
+      }
+      .shot img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .caption {
+        position: absolute;
+        right: 10px;
+        bottom: 10px;
+        padding: 4px 8px;
+        border-radius: 6px;
+        background: rgba(8, 18, 12, 0.84);
+        color: #f2f3f4;
+        font-weight: 600;
+        font-size: 13px;
+        line-height: 1.2;
+      }
+      /* The caption alone, for the loop: a transparent page the caption sits on. */
+      body.caption-only {
+        width: auto;
+        height: auto;
+        padding: 0;
+        background: transparent;
+        display: block;
+      }
+      .caption-only .caption {
+        position: static;
+        display: inline-block;
+        font-size: 16px;
+        padding: 5px 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="text">
+      <p class="title"></p>
+      <p class="line"></p>
+      <p class="role"></p>
+    </div>
+    <div class="shot" hidden>
+      <img alt="" />
+      <p class="caption"></p>
+    </div>
+    <script>
+      const params = new URLSearchParams(location.search);
+      for (const key of ["title", "line", "role", "caption"]) {
+        for (const el of document.querySelectorAll(`.${key}`)) el.textContent = params.get(key) ?? "";
+      }
+      const still = params.get("still");
+      if (params.get("mode") === "caption") {
+        document.body.className = "caption-only";
+        document.querySelector(".text").remove();
+        document.body.append(document.querySelector(".caption"));
+        document.querySelector(".shot").remove();
+      } else if (still) {
+        document.body.className = "with-shot";
+        document.querySelector(".shot").hidden = false;
+        document.querySelector(".shot img").src = still;
+      }
+    </script>
+  </body>
+</html>

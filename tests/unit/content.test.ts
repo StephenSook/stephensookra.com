@@ -128,8 +128,8 @@ describe("project schema and card rules", () => {
     expect(featured.filter((p) => !p.poster).map((p) => p.slug)).toEqual([]);
   });
 
-  it("the text-only XR Dojo poster says what projects.ts says", () => {
-    const text = JSON.parse(readFileSync(join(process.cwd(), "scripts/posters/xr-dojo.json"), "utf8"));
+  it("the XR Dojo poster says what projects.ts says", () => {
+    const text = JSON.parse(readFileSync(join(process.cwd(), "scripts/media/xr-dojo.json"), "utf8"));
     const dojo = projects.find((p) => p.slug === "xr-dojo")!;
     expect(text.title).toBe(dojo.title);
     expect(text.line).toBe(dojo.line);

@@ -323,8 +323,9 @@ test("in an emulated Quest 3: leave and enter again from the same page, then pul
   await expect(status).toHaveText("In VR", { timeout: 15_000 });
   expect(xrChunks.length).toBe(chunksAfterFirst);
   await inputsReady();
-  await selectUntil(page, "controller", slot("instanter"), "Instanter card open");
-  await expect.poll(() => videos(page)).toEqual([{ src: "/loops/instanter.mp4", playing: true }]);
+  // XR Dojo's loop is the recorded browser-port capture (it has no public film).
+  await selectUntil(page, "controller", slot("xr-dojo"), "XR Dojo card open");
+  await expect.poll(() => videos(page)).toEqual([{ src: "/loops/xr-dojo.mp4", playing: true }]);
   await selectUntil(page, "controller", EXIT, "Left VR");
   await expect.poll(() => videos(page)).toEqual([{ src: null, playing: false }]);
   await context.close();

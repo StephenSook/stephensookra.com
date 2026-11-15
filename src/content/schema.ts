@@ -84,18 +84,34 @@ export const projectSchema = z.object({
     })
     .optional(),
   /**
-   * A short silent loop the headset card plays, cut from the project's own film by
-   * scripts/loops/cut-loops.sh (film id, start and length match its row there).
+   * A short silent loop the headset card plays. Either cut from the project's own film by
+   * scripts/loops/cut-loops.sh (film id, start and length match its row there), or, for a
+   * project with no public film, from a recorded capture by scripts/media/capture-media.mjs
+   * (start and length match scripts/media/<capture>.json).
    */
   loop: z
-    .object({
-      src: z.string().regex(/^\/loops\/[a-z0-9-]+\.mp4$/),
-      width: z.number().int().positive(),
-      height: z.number().int().positive(),
-      film: z.string().regex(/^[A-Za-z0-9_-]{11}$/),
-      start: z.number().nonnegative(),
-      length: z.number().positive().max(10),
-    })
+    .union([
+      z
+        .object({
+          src: z.string().regex(/^\/loops\/[a-z0-9-]+\.mp4$/),
+          width: z.number().int().positive(),
+          height: z.number().int().positive(),
+          film: z.string().regex(/^[A-Za-z0-9_-]{11}$/),
+          start: z.number().nonnegative(),
+          length: z.number().positive().max(10),
+        })
+        .strict(),
+      z
+        .object({
+          src: z.string().regex(/^\/loops\/[a-z0-9-]+\.mp4$/),
+          width: z.number().int().positive(),
+          height: z.number().int().positive(),
+          capture: z.string().regex(/^[a-z0-9-]+$/),
+          start: z.number().nonnegative(),
+          length: z.number().positive().max(10),
+        })
+        .strict(),
+    ])
     .optional(),
   links: z.array(linkSchema),
   disclosure: z.string().min(10).optional(),

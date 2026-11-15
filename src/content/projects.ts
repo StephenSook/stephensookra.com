@@ -19,7 +19,10 @@ const film = (id: string): ProjectLink => ({
   url: `https://www.youtube.com/watch?v=${id}`,
   label: "Watch the film",
 });
-/** Posters are frames from Stephen's own films (their YouTube thumbnails), re-encoded to 720 px WebP. */
+/**
+ * Posters are frames from Stephen's own films (their YouTube thumbnails), re-encoded to 720 px
+ * WebP; XR Dojo's, with no public film, is made from a recorded capture (scripts/media).
+ */
 const poster = (slug: string, alt: string) => ({ src: `/posters/${slug}.webp`, width: 720, height: 405, alt });
 
 /** A headset card loop (see scripts/loops/cut-loops.sh): slug, film id, start s, length s, size. */
@@ -148,12 +151,16 @@ export const projects: Project[] = [
     group: "xr",
     order: 3,
     result: { state: "role", role: "Software Engineer Intern", org: "XR Dojo", start: "2026-03" },
-    // A text-only poster (title, line, role) until Stephen sends captures of his soccer throw
-    // game. To swap: replace public/posters/xr-dojo.webp with a 720 by 405 frame, update the alt
-    // below, then rebuild what is made from the posters: npm run case:posters, case:models,
-    // vision:room and marker:card. The text version comes from scripts/posters/xr-dojo.json
-    // (node scripts/posters/make-text-poster.mjs xr-dojo).
-    poster: poster("xr-dojo", "Title card for XR Dojo: AR gameplay in Unity C# and a browser port in React Three Fiber."),
+    // Poster and loop come from a local run of Stephen's browser port with scripted taps,
+    // recorded 2026-11-15 (scripts/media/xr-dojo.json: source hash, still, crop, loop window).
+    // Remake both with npm run media:capture -- xr-dojo <capture.mp4>, then rebuild what is
+    // made from the posters: npm run case:posters, case:models and vision:room (marker:card too,
+    // when the printed card should change).
+    poster: poster(
+      "xr-dojo",
+      "Title card for XR Dojo: AR gameplay in Unity C# and a browser port in React Three Fiber, beside a frame of the browser port: a ball under a moving goal ring and the words Level 2, goal on the move. Captioned: Browser port, scripted taps.",
+    ),
+    loop: { src: "/loops/xr-dojo.mp4", width: 720, height: 406, capture: "xr-dojo", start: 4, length: 9 },
     // Company repos are private: no repo link, no Try link, no media of other people.
     links: [],
     caseStudy: {
