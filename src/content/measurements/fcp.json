@@ -22,28 +22,28 @@
     {
       "label": "old site",
       "url": "https://stephensookra.com/",
-      "measuredAt": "2026-11-15T09:28:23.537Z",
+      "measuredAt": "2026-11-15T10:42:52.085Z",
       "runsMs": [
-        2392,
-        2312,
-        2328,
-        2328,
-        2352
+        2404,
+        2364,
+        2344,
+        2424,
+        2408
       ],
-      "medianMs": 2328
+      "medianMs": 2404
     },
     {
       "label": "new preview",
-      "url": "https://stephensookra-bbttvfevo-ssookra-7703s-projects.vercel.app/",
-      "measuredAt": "2026-11-15T09:31:05.353Z",
+      "url": "https://stephensookra-55rxzv30n-ssookra-7703s-projects.vercel.app/",
+      "measuredAt": "2026-11-15T10:42:07.765Z",
       "runsMs": [
         1596,
-        1548,
-        1636,
-        1612,
-        1604
+        1564,
+        1604,
+        1652,
+        1552
       ],
-      "medianMs": 1604
+      "medianMs": 1596
     }
   ]
 }
