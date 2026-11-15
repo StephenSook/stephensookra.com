@@ -28,8 +28,57 @@ async function slotPoint(page: Page, slug: string) {
   return { x: box.x + ((ndc.x + 1) / 2) * box.width, y: box.y + ((1 - ndc.y) / 2) * box.height };
 }
 
+/** Records every value the stage's data-intro takes, with the time it took it. */
+const RECORD_INTRO = `
+  window.__intro = [];
+  new MutationObserver(() => {
+    const v = document.querySelector(".case-stage")?.getAttribute("data-intro");
+    const last = window.__intro[window.__intro.length - 1];
+    if (v && (!last || last.v !== v)) window.__intro.push({ v, t: performance.now() });
+  }).observe(document, { subtree: true, attributes: true, attributeFilter: ["data-intro"] });
+`;
+type IntroStep = { v: string; t: number };
+const introSteps = (page: Page) => page.evaluate(() => (window as unknown as { __intro: IntroStep[] }).__intro);
+
 test.describe("desktop", () => {
   test.use(DESKTOP);
+
+  test("on the first view the case switches on once, within 1.2 s, then rests", async ({ page }) => {
+    await page.addInitScript({ content: RECORD_INTRO });
+    await page.goto("/");
+    await page.waitForSelector(".case-stage[data-scene=ready]", { timeout: 30_000 });
+    // Keep the pointer off the case and the grid, so nothing cancels it.
+    await page.mouse.move(2, 2);
+    await expect(page.locator(".case-stage")).toHaveAttribute("data-intro", "done", { timeout: 10_000 });
+    const steps = await introSteps(page);
+    expect(steps.map((s) => s.v)).toEqual(["waiting", "running", "done"]);
+    // 1.1 s budget, plus a frame or two of slack for the settle to be seen.
+    expect(steps[2].t - steps[1].t).toBeLessThan(1250);
+    await expect(page.locator(".case-stage")).not.toHaveAttribute("data-lit");
+  });
+
+  test("a second load in the same session skips the load moment", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForSelector(".case-stage[data-scene=ready]", { timeout: 30_000 });
+    await page.mouse.move(2, 2);
+    await expect(page.locator(".case-stage")).toHaveAttribute("data-intro", "done", { timeout: 10_000 });
+    await page.reload();
+    await page.waitForSelector(".case-stage[data-scene=ready]", { timeout: 30_000 });
+    await expect(page.locator(".case-stage")).toHaveAttribute("data-intro", "skipped");
+  });
+
+  test("pointing at a slot during the load moment cancels it and lights that slot", async ({ page }) => {
+    await page.addInitScript({ content: RECORD_INTRO });
+    await page.goto("/");
+    await page.waitForSelector(".case-stage[data-scene=ready]", { timeout: 30_000 });
+    await page.mouse.move(2, 2);
+    await expect(page.locator(".case-stage")).toHaveAttribute("data-intro", "running", { timeout: 10_000 });
+    const b2 = await slotPoint(page, "instanter");
+    await page.mouse.move(b2.x, b2.y);
+    await expect(page.locator(".case-stage")).toHaveAttribute("data-intro", "cancelled");
+    await expect(page.locator(".case-stage")).toHaveAttribute("data-lit", "instanter");
+    expect((await introSteps(page)).map((s) => s.v)).toEqual(["waiting", "running", "cancelled"]);
+  });
 
   test("the poster is in the first HTML and three.js arrives only after the load event", async ({ page }) => {
     let loadedAt = Number.POSITIVE_INFINITY;
@@ -100,6 +149,7 @@ test.describe("desktop", () => {
     await expect(page.locator(".case-stage canvas")).toHaveCount(0);
     await expect(page.locator(".case-poster img")).toBeVisible();
     expect(await threeLoaded(page)).toBeNull();
+    await expect(page.locator(".case-stage")).not.toHaveAttribute("data-intro");
     await context.close();
   });
 

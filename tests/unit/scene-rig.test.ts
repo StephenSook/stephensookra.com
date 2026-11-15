@@ -37,6 +37,18 @@ describe("case rig", () => {
     rig.dispose();
   });
 
+  it("follows intro targets slot by slot, in reading order (A1 to B3), when given them", () => {
+    expect(layout.projectSlots.map((s) => s.row)).toEqual(["A", "A", "A", "B", "B", "B"]);
+    const rig = createRig(layout);
+    const targets = [1, 1, 0, 0, 0, 1];
+    for (let i = 0; i < 120; i++) rig.step(null, 1 / 60, targets);
+    layout.projectSlots.forEach((s, i) => expect(rig.litValue(s.slug), s.slug).toBe(targets[i]));
+    // Without intro targets, the lit slug rules again.
+    for (let i = 0; i < 120; i++) rig.step("aloud", 1 / 60);
+    layout.projectSlots.forEach((s) => expect(rig.litValue(s.slug), s.slug).toBe(s.slug === "aloud" ? 1 : 0));
+    rig.dispose();
+  });
+
   it("never lights a small cell", () => {
     const rig = createRig(layout);
     for (let i = 0; i < 120; i++) rig.step("aloud", 1 / 60);

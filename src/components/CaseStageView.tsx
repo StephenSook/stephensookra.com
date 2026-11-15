@@ -1,6 +1,6 @@
 // Imported only through the client CaseStage, so it may take function props (test seams).
 import { Component, useCallback, useEffect, useState, type ComponentType, type ReactNode } from "react";
-import type { CaseSceneProps } from "@/scene/CaseScene";
+import type { CaseSceneProps, IntroState } from "@/scene/CaseScene";
 import { useCaseLight } from "@/scene/caseLight";
 import { afterLoadAndIdle, onSceneEnvChange, readSceneEnv, shouldLoadScene, type SceneEnv } from "@/scene/gate";
 
@@ -58,6 +58,7 @@ export function CaseStageView({
   const [phase, setPhase] = useState<Phase>("poster");
   const [lost, setLost] = useState(false);
   const [open, setOpen] = useState(false);
+  const [intro, setIntro] = useState<IntroState | null>(null);
   const { slug } = useCaseLight();
 
   // Track the gate: screen width, pointer, reduced motion, WebGL2. When it closes, the scene
@@ -103,13 +104,14 @@ export function CaseStageView({
       className={`case-stage case-stage--${variant}`}
       data-scene={showScene ? phase : "poster"}
       data-lit={slug ?? undefined}
+      data-intro={showScene && intro ? intro : undefined}
       aria-hidden="true"
     >
       <div className="case-stage__poster">{children}</div>
       {showScene ? (
         <div className="case-stage__scene">
           <SceneBoundary onError={handleContextLost}>
-            <Scene onReady={handleReady} onContextLost={handleContextLost} />
+            <Scene onReady={handleReady} onContextLost={handleContextLost} onIntro={setIntro} />
           </SceneBoundary>
         </div>
       ) : null}

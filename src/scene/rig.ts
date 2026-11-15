@@ -83,12 +83,14 @@ export function createRig(layout: CaseLayout) {
     /**
      * Advances the easing by dt seconds; returns true while anything is still moving.
      * `lit` is a project slug, or a row light such as "row:xr" that lights a whole row.
+     * `intro`, when given, is the load moment's target per project slot (in slot order) and
+     * takes the place of `lit` (scene/intro.ts).
      */
-    step(lit: string | null, dt: number): boolean {
+    step(lit: string | null, dt: number, intro?: readonly number[]): boolean {
       let moving = false;
       const litRow = lit ? ROW_LIGHTS[lit] : undefined;
       slugs.forEach((slug, i) => {
-        const target = slug === lit || rows[i] === litRow ? 1 : 0;
+        const target = intro ? (intro[i] ?? 0) : slug === lit || rows[i] === litRow ? 1 : 0;
         const next = damp(litAttr.getX(i), target, LIGHT_RATE, dt);
         const settled = Math.abs(next - target) <= SETTLED;
         if (!settled) moving = true;

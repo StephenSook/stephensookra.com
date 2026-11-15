@@ -2,24 +2,38 @@
 // client boundary itself and may take function props.
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import specJson from "./case-spec.json";
 import { caseLight } from "./caseLight";
 import { buildAtlas, readTokens } from "./caseAssets";
+import { INTRO_DELAY_MS, introFinished, introSeen, introTargets, markIntroSeen } from "./intro";
 import { buildLayout } from "./layout";
 import { fitCamera, pickSlot } from "./pick";
 import { createRig, type CaseRig } from "./rig";
 
 const layout = buildLayout(specJson);
 
+/** Where the load moment stands (scene/intro.ts): shown on the stage as data-intro. */
+export type IntroState = "waiting" | "running" | "done" | "cancelled" | "skipped";
+
 export type CaseSceneProps = {
   /** Called once the first frame (with posters, or without if they failed) is on screen. */
   onReady?: () => void;
   /** Called if the browser drops the WebGL context; the stage then shows the poster. */
   onContextLost?: () => void;
+  /** Called as the load moment waits, runs and ends. */
+  onIntro?: (state: IntroState) => void;
 };
 
-function Case({ onReady, onContextLost }: CaseSceneProps) {
+function sessionStore(): Storage | undefined {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return undefined;
+  }
+}
+
+function Case({ onReady, onContextLost, onIntro }: CaseSceneProps) {
   const router = useRouter();
   const { gl, scene, size, set, get, invalidate } = useThree();
   const rigRef = useRef<CaseRig | null>(null);
@@ -27,12 +41,17 @@ function Case({ onReady, onContextLost }: CaseSceneProps) {
   // never re-runs the effects below: re-running them cleared the light and rebuilt the atlas.
   const onReadyRef = useRef(onReady);
   const onLostRef = useRef(onContextLost);
+  const onIntroRef = useRef(onIntro);
   const routerRef = useRef(router);
   useEffect(() => {
     onReadyRef.current = onReady;
     onLostRef.current = onContextLost;
+    onIntroRef.current = onIntro;
     routerRef.current = router;
   });
+  // The load moment: started at (performance.now) while running, otherwise null.
+  const introStart = useRef<number | null>(null);
+  const setIntro = useCallback((state: IntroState) => onIntroRef.current?.(state), []);
 
   // Build the case once, add it to the scene, dispose it on unmount.
   useEffect(() => {
@@ -65,9 +84,10 @@ function Case({ onReady, onContextLost }: CaseSceneProps) {
     return () => media.removeEventListener("change", apply);
   }, [invalidate]);
 
-  // Posters, then the first frame, then ready.
+  // Posters, then the first frame, then ready; then, once per session, the load moment.
   useEffect(() => {
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     buildAtlas(layout).then((atlas) => {
       if (cancelled) {
         atlas?.texture.dispose();
@@ -76,13 +96,34 @@ function Case({ onReady, onContextLost }: CaseSceneProps) {
       if (atlas) rigRef.current?.setAtlas(atlas.texture, atlas.rects);
       invalidate();
       requestAnimationFrame(() => {
-        if (!cancelled) onReadyRef.current?.();
+        if (cancelled) return;
+        onReadyRef.current?.();
+        const store = sessionStore();
+        if (introSeen(store)) {
+          setIntro("skipped");
+          return;
+        }
+        setIntro("waiting");
+        // Starts as the poster-to-3D crossfade finishes; a light already on (the pointer or
+        // keyboard got there first) means the visitor is busy, so it never runs.
+        timer = setTimeout(() => {
+          markIntroSeen(store);
+          if (caseLight.get().slug) {
+            setIntro("cancelled");
+            return;
+          }
+          introStart.current = performance.now();
+          setIntro("running");
+          invalidate();
+        }, INTRO_DELAY_MS);
       });
     });
     return () => {
       cancelled = true;
+      clearTimeout(timer);
+      introStart.current = null;
     };
-  }, [invalidate]);
+  }, [invalidate, setIntro]);
 
   // Pointer: light the slot under it, tilt slightly towards it, click to open the project.
   useEffect(() => {
@@ -135,8 +176,28 @@ function Case({ onReady, onContextLost }: CaseSceneProps) {
   }, [gl, get, invalidate]);
 
   // Ease lights and tilt; with frameloop="demand", keep asking for frames only while moving.
+  // While the load moment runs, its schedule sets the lights, until a light from the pointer
+  // or the grid takes over.
   useFrame((_state, dt) => {
-    if (rigRef.current?.step(caseLight.get().slug, dt)) invalidate();
+    const rig = rigRef.current;
+    if (!rig) return;
+    const lit = caseLight.get().slug;
+    const start = introStart.current;
+    if (start !== null && lit) {
+      introStart.current = null;
+      setIntro("cancelled");
+    }
+    if (introStart.current !== null) {
+      const elapsed = performance.now() - introStart.current;
+      const moving = rig.step(null, dt, introTargets(elapsed));
+      if (introFinished(elapsed, moving)) {
+        introStart.current = null;
+        setIntro("done");
+      }
+      invalidate();
+      return;
+    }
+    if (rig.step(lit, dt)) invalidate();
   });
 
   return null;
