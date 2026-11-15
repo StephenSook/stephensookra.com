@@ -9,8 +9,9 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/links/**/*.test.ts"],
-    // Up to three tries of 90 s with 30 s between, for the core route and the home page.
-    testTimeout: 720_000,
+    // A sleeping host: up to 7 tries of 90 s with 90 s of waits between, for the core route
+    // and the home page.
+    testTimeout: 1_500_000,
     maxConcurrency: 4,
   },
 });
