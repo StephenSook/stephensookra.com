@@ -1,0 +1,30 @@
+{
+  "slug": "xr-dojo",
+  "title": "XR Dojo",
+  "line": "AR gameplay in Unity C# and a browser port in React Three Fiber.",
+  "role": "Software Engineer Intern, March 2026 to now",
+  "caption": "Browser port, scripted taps.",
+  "capture": {
+    "what": "A browser port (React Three Fiber, Rapier) of the soccer throw mini-game from ATL Quest, which the XR Dojo team built in Unity. The port is Stephen's: the throw, scoring, levels, wind, goal detection, and the fixes for Unity's and three.js's different axes.",
+    "recorded": "2026-11-15",
+    "input": "Scripted taps: synthetic pointer events about 2.4 s apart. The game code is real; the input is automated.",
+    "file": "soccer-port-run-1080p.mp4",
+    "sha256": "959d6878af84b8cf5a78551fc82d79c645882b8eca43dd778c10b7e323373b4a",
+    "width": 1920,
+    "height": 1080,
+    "duration": 23.5,
+    "still": {
+      "at": 7.0,
+      "crop": {
+        "x": 593,
+        "y": 10,
+        "width": 654,
+        "height": 760
+      }
+    },
+    "loop": {
+      "start": 4,
+      "length": 9
+    }
+  }
+}

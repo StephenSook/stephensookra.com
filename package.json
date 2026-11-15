@@ -17,6 +17,7 @@
     "case:layout": "node scripts/export-case-layout.mjs",
     "case:posters": "npm run case:layout && sh scripts/blender/render-posters.sh",
     "loops": "sh scripts/loops/cut-loops.sh",
+    "media:capture": "node scripts/media/capture-media.mjs",
     "case:models": "npm run case:layout && sh scripts/blender/export-models.sh",
     "vendor:model-viewer": "sh scripts/vendor/model-viewer.sh",
     "vendor:8thwall": "sh scripts/vendor/8thwall.sh",
