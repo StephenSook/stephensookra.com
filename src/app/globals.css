@@ -393,6 +393,27 @@ p {
   font-size: var(--step--1);
 }
 
+.xr-door__status {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: var(--step--1);
+}
+
+.xr-door__status:empty {
+  display: none;
+}
+
+/* The headset draws its own frames; the page canvas only hosts the WebGL context. */
+.xr-session {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 2px;
+  height: 2px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* ---------------------------------------------------------------- the case */
 
 /*
