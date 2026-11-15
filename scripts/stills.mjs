@@ -27,6 +27,11 @@ for (const route of routes) {
       const response = await page.goto(new URL(route, baseUrl).toString(), { waitUntil: "load" });
       // Stills need settled pixels, not a quiet network: background prefetches may still run.
       await page.waitForLoadState("networkidle", { timeout: 5000 }).catch(() => {});
+      // Where the 3D case can load (wide screens), wait for its first frame; elsewhere the poster stays.
+      if (width.name === "1280" && (await page.locator(".case-stage").count()) > 0) {
+        await page.waitForSelector(".case-stage[data-scene=ready]", { timeout: 20000 }).catch(() => {});
+        await page.waitForTimeout(800);
+      }
       const slug = route === "/" ? "home" : route.replace(/^\//, "").replace(/\//g, "_");
       const file = join(outDir, `${slug}-${width.name}-${colorScheme}.png`);
       await page.screenshot({ path: file, fullPage: true });
