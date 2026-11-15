@@ -16,7 +16,8 @@
     "links": "vitest run --config vitest.links.config.mts",
     "case:layout": "node scripts/export-case-layout.mjs",
     "case:posters": "npm run case:layout && sh scripts/blender/render-posters.sh",
-    "loops": "sh scripts/loops/cut-loops.sh"
+    "loops": "sh scripts/loops/cut-loops.sh",
+    "case:models": "npm run case:layout && sh scripts/blender/export-models.sh"
   },
   "dependencies": {
     "@react-three/fiber": "9.8.2",
@@ -43,6 +44,7 @@
     "@vitejs/plugin-react": "6.3.0",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
+    "gltf-validator": "2.0.0-dev.3.10",
     "iwer": "2.8.0",
     "jsdom": "31.0.1",
     "schema-dts": "2.1.0",

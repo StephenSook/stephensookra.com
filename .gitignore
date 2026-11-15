@@ -48,6 +48,9 @@ next-env.d.ts
 
 # generated inputs and raw renders for the Blender poster script
 /scripts/blender/out/
+# Python bytecode (Blender scripts import each other)
+__pycache__/
+*.pyc
 
 # local assistant notes
 CLAUDE.local.md
