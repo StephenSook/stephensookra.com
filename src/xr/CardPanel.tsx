@@ -41,6 +41,7 @@ export function CardPanel({ project, from, to, video, texture, onClose, pointing
   const group = useRef<THREE.Group>(null);
   const videoMaterial = useRef<THREE.MeshBasicMaterial>(null);
   const progress = useRef(0);
+  const reported = useRef<"out" | "moving" | "in" | null>(null);
   // Keep showing the last card while it slides back into its slot.
   const [shown, setShown] = useState<Project | null>(project);
   if (project && project !== shown) setShown(project);
@@ -78,6 +79,11 @@ export function CardPanel({ project, from, to, video, texture, onClose, pointing
     progress.current = damp(progress.current, target, PULL_RATE, dt);
     if (Math.abs(progress.current - target) < SETTLED) progress.current = target;
     const p = progress.current;
+    const state = p === 1 ? "out" : p === 0 ? "in" : "moving";
+    if (state !== reported.current) {
+      reported.current = state;
+      pointing.card(state);
+    }
     g.position.lerpVectors(fromV, toV, p);
     g.scale.setScalar(0.35 + 0.65 * p);
     g.visible = p > 0.01;
