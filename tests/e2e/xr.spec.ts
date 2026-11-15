@@ -10,6 +10,12 @@ import { headsetPageUrl, webLaunchUrl } from "../../src/xr/support";
 import { HINT_AHEAD, HINT_BELOW, HINT_EXIT } from "../../src/xr/wall";
 import { PHONE } from "./helpers";
 
+// The emulated-headset scenarios run many paced steps, each with its own bound (frames,
+// select events, toPass windows). On a shared CI runner the longest took 20 s, then 24 s,
+// then 29 s as the suite grew, against the default 30 s per test; one ran out on main while
+// selecting its last Exit. They get a whole-test budget that fits CI, not a looser step.
+test.describe.configure({ timeout: 90_000 });
+
 // Plain Chromium has no XR runtime, so these runs see the laptop and phone doors.
 
 test.describe("the headset door without a headset", () => {
@@ -164,12 +170,23 @@ async function select(page: Page, input: Input, holdMs = 0) {
  */
 async function selectUntil(page: Page, input: Input, target: Target, expected: string, from = RIGHT) {
   const status = page.getByRole("status");
+  let attempts = 0;
+  const begin = Date.now();
   await expect(async () => {
     if ((await status.textContent()) === expected) return;
+    attempts += 1;
+    const a0 = Date.now();
     await aim(page, input, target, from);
+    const a1 = Date.now();
     await select(page, input);
-    await expect(status).toHaveText(expected, { timeout: 1500 });
+    const a2 = Date.now();
+    try {
+      await expect(status).toHaveText(expected, { timeout: 1500 });
+    } finally {
+      console.log(`[S] ${expected} attempt ${attempts}: aim ${a1 - a0}ms select ${a2 - a1}ms status ${Date.now() - a2}ms`);
+    }
   }).toPass({ timeout: 20_000 });
+  console.log(`[S] ${expected} done in ${Date.now() - begin}ms after ${attempts} attempt(s)`);
 }
 
 /** Records every data-pointing value from now on (the headset pointer's path). */
@@ -223,6 +240,10 @@ async function questPage(browser: Browser, input: Input, install = INSTALL) {
 for (const input of ["controller", "hand"] as const) {
   test(`in an emulated Quest 3 (${input}): enter, pull cards, one video at a time, exit`, async ({ browser }) => {
     const { context, page, xrChunks, inputsReady } = await questPage(browser, input);
+    const cdp = await context.newCDPSession(page);
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: Number(process.env.THROTTLE ?? 1) });
+    let t0 = Date.now();
+    const mark = (label: string) => { console.log(`[T] ${input} ${label} ${Date.now() - t0}ms`); t0 = Date.now(); };
     await page.goto("/case");
     const enter = page.getByRole("button", { name: "Enter VR" });
     await expect(enter).toBeVisible();
@@ -231,15 +252,19 @@ for (const input of ["controller", "hand"] as const) {
     await page.waitForSelector(".case-stage[data-scene=ready]", { timeout: 30_000 });
     await page.waitForLoadState("networkidle");
     expect(xrChunks, "no XR code before the press").toEqual([]);
+    mark("page and scene ready");
 
     await enter.click();
     const status = page.getByRole("status");
     await expect(status).toHaveText("In VR", { timeout: 15_000 });
     expect(xrChunks.length, "the XR chunk loads on the press").toBeGreaterThan(0);
+    mark("in VR");
     await inputsReady();
 
     // Pull the Instanter card: its loop plays.
+    mark("inputs ready");
     await selectUntil(page, input, slot("instanter"), "Instanter card open");
+    mark("open instanter");
     await expect.poll(() => videos(page)).toEqual([{ src: "/loops/instanter.mp4", playing: true }]);
 
     // The open card blocks the slots behind it: this ray, through the card's centre, lands on
@@ -248,10 +273,12 @@ for (const input of ["controller", "hand"] as const) {
     await aim(page, input, CARD);
     await select(page, input);
     await expect(status).toHaveText("Instanter card open");
+    mark("card blocks");
 
     // Close puts it back and stops the loop.
     await selectUntil(page, input, CLOSE_BUTTON, "In VR");
     await expect.poll(() => videos(page)).toEqual([{ src: null, playing: false }]);
+    mark("close 1");
 
     // The put-away card takes no pointers, even while it is still sliding back in front of
     // its slot: aimed at the slot straight after Close, the ray reaches the slot without ever
@@ -268,13 +295,16 @@ for (const input of ["controller", "hand"] as const) {
 
     // Pull Aloud, then Case Light (reaching past the open card): one video, switched.
     await selectUntil(page, input, slot("aloud"), "Aloud card open");
+    mark("open aloud");
     await expect.poll(() => videos(page)).toEqual([{ src: "/loops/aloud.mp4", playing: true }]);
     await page.waitForTimeout(600);
     await selectUntil(page, input, slot("case-light"), "Case Light card open", LEFT);
+    mark("open case light");
     await expect.poll(() => videos(page)).toEqual([{ src: "/loops/case-light.mp4", playing: true }]);
 
     // Exit: back on the page, focus on Enter VR, nothing left playing.
     await selectUntil(page, input, EXIT, "Left VR");
+    mark("exit");
     await expect(enter).toBeFocused();
     await expect.poll(() => videos(page)).toEqual([{ src: null, playing: false }]);
     await context.close();
