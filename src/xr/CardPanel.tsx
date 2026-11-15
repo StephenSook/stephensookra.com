@@ -7,6 +7,7 @@ import { cardText, fitBox } from "./card";
 import { CLOSE, PANEL, VIDEO_BOX } from "./cardLayout";
 import { FONT_REGULAR, Label } from "./Label";
 import type { Pointing } from "./pointing";
+import type { Presses } from "./press";
 import type { VideoController } from "./video";
 
 const TEXT_X = -0.005;
@@ -28,6 +29,7 @@ export type CardPanelProps = {
   texture: () => THREE.Texture | null;
   onClose: () => void;
   pointing: Pointing;
+  presses: Presses;
 };
 
 /**
@@ -35,7 +37,7 @@ export type CardPanelProps = {
  * headset, made by the reader's own select. It blocks pointers to the slots behind it,
  * so a select on the card never opens a slot through it.
  */
-export function CardPanel({ project, from, to, video, texture, onClose, pointing }: CardPanelProps) {
+export function CardPanel({ project, from, to, video, texture, onClose, pointing, presses }: CardPanelProps) {
   const group = useRef<THREE.Group>(null);
   const videoMaterial = useRef<THREE.MeshBasicMaterial>(null);
   const progress = useRef(0);
@@ -117,9 +119,13 @@ export function CardPanel({ project, from, to, video, texture, onClose, pointing
         position={[CLOSE.x, CLOSE.y, 0.003]}
         pointerEvents={open ? "listener" : "none"}
         pointerEventsType={{ deny: "grab" }}
-        onClick={onClose}
+        onPointerDown={(e) => presses.down("close", e.pointerId)}
+        onPointerUp={(e) => presses.up("close", e.pointerId) && onClose()}
         onPointerOver={() => pointing.over("close")}
-        onPointerOut={() => pointing.out("close")}
+        onPointerOut={(e) => {
+          pointing.out("close");
+          presses.leave("close", e.pointerId);
+        }}
       >
         <planeGeometry args={[CLOSE.w, CLOSE.h]} />
         <meshBasicMaterial color="#2a2d34" />

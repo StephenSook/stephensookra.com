@@ -128,11 +128,12 @@ async function aim(page: Page, input: Input, target: Target, from = RIGHT) {
  * release within 300 ms, and the emulated headset samples inputs only on its own frames, so
  * waiting on its events works at any frame rate where waiting on a clock does not.
  */
-async function select(page: Page, input: Input) {
+async function select(page: Page, input: Input, holdMs = 0) {
   for (const [value, event] of [
     [1, "selectstart"],
     [0, "selectend"],
   ] as const) {
+    if (value === 0 && holdMs) await page.waitForTimeout(holdMs);
     await page.evaluate(
       ({ input, value, event }) =>
         new Promise<void>((resolve, reject) => {
@@ -309,5 +310,20 @@ test("in an emulated Quest 3: leave and enter again from the same page, then pul
   await expect.poll(() => videos(page)).toEqual([{ src: "/loops/instanter.mp4", playing: true }]);
   await selectUntil(page, "controller", EXIT, "Left VR");
   await expect.poll(() => videos(page)).toEqual([{ src: null, playing: false }]);
+  await context.close();
+});
+
+test("in an emulated Quest 3: a slow pinch (held 600 ms) still opens a card", async ({ browser }) => {
+  // The pointer library's own click drops presses held over 300 ms; a relaxed pinch is often
+  // longer, so the site counts press and release on the same target, however long.
+  const { context, page, inputsReady } = await questPage(browser, "hand");
+  await page.goto("/case");
+  await page.getByRole("button", { name: "Enter VR" }).click();
+  const status = page.getByRole("status");
+  await expect(status).toHaveText("In VR", { timeout: 15_000 });
+  await inputsReady();
+  await aim(page, "hand", slot("aloud"));
+  await select(page, "hand", 600);
+  await expect(status).toHaveText("Aloud card open");
   await context.close();
 });

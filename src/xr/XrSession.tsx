@@ -18,6 +18,7 @@ import { slotLabels, LABEL_SIZE } from "./labels";
 import { pickPlanes, placeCase } from "./placement";
 import { createEntry } from "./entry";
 import { createPointing, type Pointing } from "./pointing";
+import { createPresses } from "./press";
 import type { XrSessionProps } from "./types";
 import { createVideoController } from "./video";
 
@@ -154,6 +155,8 @@ function HeadsetCase({
 
   // The session's one video element and its texture (design brief: one video at a time).
   // The texture is made and disposed by the same effect, so each setup has a live one.
+  // Selects count on press and release on the same target, however long the press (./press).
+  const presses = useMemo(() => createPresses(), []);
   const video = useMemo(() => createVideoController(), []);
   const texture = useRef<THREE.VideoTexture | null>(null);
   useEffect(() => {
@@ -242,11 +245,13 @@ function HeadsetCase({
             hovered.current = p.slug;
             pointing.over(p.slug);
           }}
-          onPointerOut={() => {
+          onPointerOut={(e) => {
             if (hovered.current === p.slug) hovered.current = null;
             pointing.out(p.slug);
+            presses.leave(p.slug, e.pointerId);
           }}
-          onClick={() => select(p.slug)}
+          onPointerDown={(e) => presses.down(p.slug, e.pointerId)}
+          onPointerUp={(e) => presses.up(p.slug, e.pointerId) && select(p.slug)}
         >
           <planeGeometry args={[p.w, p.h]} />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} />
@@ -265,9 +270,13 @@ function HeadsetCase({
         name="exit"
         position={[0, EXIT.y, layout.depth / 2]}
         pointerEventsType={{ deny: "grab" }}
-        onClick={() => void store.getState().session?.end()}
+        onPointerDown={(e) => presses.down("exit", e.pointerId)}
+        onPointerUp={(e) => presses.up("exit", e.pointerId) && void store.getState().session?.end()}
         onPointerOver={() => pointing.over("exit")}
-        onPointerOut={() => pointing.out("exit")}
+        onPointerOut={(e) => {
+          pointing.out("exit");
+          presses.leave("exit", e.pointerId);
+        }}
       >
         <planeGeometry args={[EXIT.w, EXIT.h]} />
         <meshBasicMaterial color="#1b1d22" />
@@ -281,6 +290,7 @@ function HeadsetCase({
         texture={getTexture}
         onClose={() => select(null)}
         pointing={pointing}
+        presses={presses}
       />
       {showStats && <Stats store={store} />}
     </group>
