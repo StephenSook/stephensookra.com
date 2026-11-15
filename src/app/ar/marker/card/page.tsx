@@ -9,7 +9,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/ar/marker/card" },
 };
 
-const ALT = "A card with the name Stephen Sookra, a picture of the lit letter case and the address stephensookra.com/ar/marker.";
+const ALT =
+  "A card with the name Stephen Sookra, Software Engineer, XR, a picture of the lit letter case with six projects, and the line: Open stephensookra.com/ar/marker, then point your phone at this card.";
 
 export default function MarkerCardPage() {
   return (

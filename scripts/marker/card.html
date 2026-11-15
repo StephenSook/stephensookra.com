@@ -69,24 +69,21 @@
         width: 200mm;
         height: 150mm;
       }
-      .head,
-      .foot {
-        display: flex;
-        align-items: baseline;
-      }
       .head {
+        display: flex;
+        align-items: center;
         justify-content: space-between;
         gap: 3cqw;
-      }
-      /* One sentence: the instruction runs straight into the address. */
-      .foot {
-        gap: 1.2cqw;
       }
       .name {
         font-weight: 600;
         font-size: 7cqw;
         line-height: 1;
         letter-spacing: -0.02em;
+      }
+      /* Two short lines at the top right: the role, then what the card shows. */
+      .what {
+        text-align: right;
       }
       .what,
       .go {
@@ -99,10 +96,9 @@
         object-fit: contain;
         display: block;
       }
+      /* One sentence: the instruction, with the address in bold. */
       .url {
         font-weight: 600;
-        font-size: 3.6cqw;
-        line-height: 1.1;
       }
       .note {
         font-family: "Familjen Grotesk", sans-serif;
@@ -117,13 +113,13 @@
         <div class="card">
           <div class="head">
             <p class="name">Stephen Sookra</p>
-            <p class="what">Six projects in a lit letter case</p>
+            <div class="what">
+              <p>Software Engineer, XR</p>
+              <p>Six projects in a lit letter case</p>
+            </div>
           </div>
           <img class="case" alt="" />
-          <div class="foot">
-            <p class="go">Point a phone at this card on</p>
-            <p class="url">stephensookra.com/ar/marker</p>
-          </div>
+          <p class="go">Open <strong class="url">stephensookra.com/ar/marker</strong>, then point your phone at this card.</p>
         </div>
       </div>
       <p class="note pdf-only">Print on any paper and cut along the line.</p>
