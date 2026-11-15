@@ -58,7 +58,7 @@ describe("RepoStatusView", () => {
     expect(container.textContent).not.toMatch(/\d/);
   });
 
-  it("shows last commit, CI and stars when the read worked", () => {
+  it("shows last commit, CI and licence when the read worked, and leaves out a small star count", () => {
     const { container } = render(
       <RepoStatusView
         status={{
@@ -66,7 +66,7 @@ describe("RepoStatusView", () => {
           repo: "StephenSook/case-light",
           url: "https://github.com/StephenSook/case-light",
           lastCommit: "2026-11-04T08:22:08Z",
-          stars: 1,
+          stars: 9,
           ci: "passing",
           license: "MIT",
         }}
@@ -74,7 +74,46 @@ describe("RepoStatusView", () => {
     );
     expect(container).toHaveTextContent("Last commit Nov 4, 2026");
     expect(container).toHaveTextContent("CI passing");
-    expect(container).toHaveTextContent("1 star");
+    expect(container).toHaveTextContent("MIT licence");
+    expect(container.textContent).not.toMatch(/star/i);
+  });
+
+  it("shows stars once a repo has 10 or more", () => {
+    const { container } = render(
+      <RepoStatusView
+        status={{
+          state: "ok",
+          repo: "StephenSook/x",
+          url: "https://github.com/StephenSook/x",
+          lastCommit: "2026-01-02T00:00:00Z",
+          stars: 10,
+          ci: "passing",
+          license: "Apache-2.0",
+        }}
+      />,
+    );
+    expect(container).toHaveTextContent("10 stars");
+    expect(container).toHaveTextContent("Apache-2.0 licence");
+  });
+
+  it("leaves out the licence line when GitHub reports none or NOASSERTION", () => {
+    for (const license of [null, "NOASSERTION"]) {
+      const { container, unmount } = render(
+        <RepoStatusView
+          status={{
+            state: "ok",
+            repo: "StephenSook/x",
+            url: "https://github.com/StephenSook/x",
+            lastCommit: "2026-01-02T00:00:00Z",
+            stars: 0,
+            ci: "passing",
+            license,
+          }}
+        />,
+      );
+      expect(container.textContent, String(license)).not.toMatch(/licen/i);
+      unmount();
+    }
   });
 
   it("says when CI has not finished", () => {
@@ -109,7 +148,6 @@ describe("RepoStatusView", () => {
       />,
     );
     expect(container).toHaveTextContent("No CI runs");
-    expect(container).toHaveTextContent("0 stars");
   });
 });
 
