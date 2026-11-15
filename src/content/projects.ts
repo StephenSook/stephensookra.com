@@ -269,6 +269,8 @@ export const projects: Project[] = [
     order: 6,
     // resume: "Won 1st of 238 and $5,000, YouCam API Hackathon"; V-REC winner email
     result: { state: "placed", prize: "1st of 238, $5,000", event: "YouCam API Hackathon", source: RESUME },
+    // Solo: Stephen's confirmation, 2026-11-15.
+    solo: true,
     repo: "StephenSook/aloud",
     poster: poster("aloud", "Frame from the Aloud film: Stephen takes a selfie on an iPhone, framed by sound alone."),
     links: [
@@ -280,7 +282,7 @@ export const projects: Project[] = [
     ],
     caseStudy: {
       evidence: "1st of 238 submissions and $5,000 at the YouCam API hackathon (Perfect Corp).",
-      // myPart omitted: the sources do not say who built what (open item for Stephen).
+      myPart: "Solo build: the voice loop, the screen-off selfie capture, the skin analysis and the web, iOS and Android apps.",
       howItWorks:
         "Aloud talks a blind shopper through skincare with the screen off. Voice runs on OpenAI Realtime over WebRTC, with Deepgram and " +
         "ElevenLabs as the fallback. MediaPipe face detection guides a selfie by sound, then the YouCam Skin Analysis API scores it: the app " +
@@ -298,6 +300,7 @@ export const projects: Project[] = [
         { label: "Aloud README", url: "https://github.com/StephenSook/aloud#readme" },
         { label: "Aloud on Devpost", url: "https://devpost.com/software/aloud-lxqr70" },
         RESUME,
+        { label: "Stephen's confirmation that Aloud was a solo build, 2026-11-15" },
       ],
     },
   },
