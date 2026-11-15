@@ -26,6 +26,41 @@ const FAR = 100;
 let caseModel: Promise<THREE.Group> | null = null;
 /** XR8 is one engine per page: the run that owns it, and how to end that run. */
 let owner: { stop(): void } | null = null;
+
+/** The camera streams the engine opened for one run. */
+type CameraRun = { streams: MediaStream[] };
+let cameraRun: CameraRun | null = null;
+let cameraGuarded = false;
+/** The engine's own files: its camera requests carry them in their call stack. */
+const ENGINE_FILES = /\/vendor\/8thwall\//;
+
+const closeAll = (streams: MediaStream[]) => streams.forEach((s) => s.getTracks().forEach((t) => t.stop()));
+
+/**
+ * The engine opens the camera itself, and on iOS 16.4 and later it opens it twice: it closes
+ * the first stream, lists the devices, then asks again without checking that the run is still
+ * wanted. A Stop during that pause would leave the second camera on. So every camera request
+ * the engine makes is tied to the run that was current when it asked; a stream that arrives
+ * after that run ended is closed at once (and the engine is told AbortError). Requests from
+ * anything else on the page pass straight through.
+ */
+function guardCamera() {
+  const media = navigator.mediaDevices;
+  if (cameraGuarded || !media?.getUserMedia) return;
+  cameraGuarded = true;
+  const open = media.getUserMedia.bind(media);
+  media.getUserMedia = async (constraints?: MediaStreamConstraints) => {
+    if (!ENGINE_FILES.test(new Error().stack ?? "")) return open(constraints);
+    const run = cameraRun;
+    const stream = await open(constraints);
+    if (!run || run !== cameraRun) {
+      closeAll([stream]);
+      throw new DOMException("The camera run had already ended", "AbortError");
+    }
+    run.streams.push(stream);
+    return stream;
+  };
+}
 function loadCase(url: string) {
   caseModel ??= new GLTFLoader()
     .loadAsync(url)
@@ -133,6 +168,10 @@ export async function startMarker({
     ],
   };
 
+  guardCamera();
+  const streams: CameraRun = { streams: [] };
+  cameraRun = streams;
+
   // Image targets only: the open-source engine has no world tracking, and this page needs none.
   xr8.XrController.configure({ disableWorldTracking: true, imageTargetData: [target] });
   xr8.addCameraPipelineModules([xr8.GlTextureRenderer.pipelineModule(), xr8.XrController.pipelineModule(), overlay]);
@@ -143,11 +182,13 @@ export async function startMarker({
     stop() {
       if (stopped) return;
       stopped = true;
+      if (cameraRun === streams) cameraRun = null;
       if (owner === session) {
         owner = null;
         xr8.stop(); // ends the camera stream, so the camera light goes off
         xr8.clearCameraPipelineModules();
       }
+      closeAll(streams.streams); // and every stream this run got, whatever the engine did
       renderer?.dispose();
       renderer = null;
     },

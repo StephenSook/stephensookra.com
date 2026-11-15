@@ -42,7 +42,7 @@ export interface XR8Api {
   clearCameraPipelineModules(): void;
   run(options: { canvas: HTMLCanvasElement; allowedDevices?: string }): void;
   stop(): void;
-  loadChunk?(name: string): Promise<void>;
+  loadChunk?(chunk: string | { name: string; url: string }): Promise<void>;
 }
 
 type EngineWindow = Window & { XR8?: XR8Api };
@@ -52,6 +52,8 @@ export const READY_MS = 30_000;
 
 let script: Promise<XR8Api> | null = null;
 let loading: Promise<XR8Api> | null = null;
+/** Failed tries at the tracking chunk so far (each retry asks for a fresh address). */
+let chunkFailures = 0;
 
 function withTimeout<T>(work: Promise<T>, ms: number, why: string): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -102,7 +104,16 @@ export function loadEngine(src = ENGINE_SRC): Promise<XR8Api> {
     const xr8 = await addScript(src);
     if (!xr8.XrController) {
       if (!xr8.loadChunk) throw new Error("this engine build cannot load image targets");
-      await withTimeout(xr8.loadChunk("slam"), READY_MS, "the image target chunk did not load in time");
+      // Safari keeps a failed module import for its URL, so a retry must ask at a new one.
+      const chunk = chunkFailures
+        ? { name: "slam", url: new URL(`xr-tracking.js?retry=${chunkFailures}`, new URL(src, location.href)).href }
+        : "slam";
+      await withTimeout(xr8.loadChunk(chunk), READY_MS, "the image target chunk did not load in time").catch(
+        (error: unknown) => {
+          chunkFailures += 1;
+          throw error;
+        },
+      );
     }
     if (!xr8.XrController) throw new Error("the image target chunk did not load");
     return xr8;
