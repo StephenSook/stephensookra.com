@@ -20,6 +20,8 @@ describe("sitemap", () => {
       `${BASE}/proof`,
       `${BASE}/case`,
       `${BASE}/case/ar`,
+      `${BASE}/ar/marker`,
+      `${BASE}/ar/marker/card`,
     ]);
   });
 });

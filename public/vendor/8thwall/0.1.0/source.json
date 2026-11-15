@@ -1,0 +1,10 @@
+{
+  "package": "@8thwall/engine",
+  "version": "0.1.0",
+  "tarballIntegrity": "sha512-Ww+evUePP6PlrPx37fVilcRc0rt9vyAHcuh5rTZemLGdRmVWH2HrZOY6EaF9swvbE5JYouy3u9VIsHicA8uwWQ==",
+  "license": "MIT",
+  "files": {
+    "xr.js": { "from": "dist/xr.js", "sha256": "e8f40d323966862ede42e090d7e271d8d466311845f802cac1f57ffed2643c4e" },
+    "xr-tracking.js": { "from": "dist/xr-tracking.js", "sha256": "50d41426e7afecc25a19a1df1538369f62c27d3cdc6b189bfc497c77b70af2a7" }
+  }
+}

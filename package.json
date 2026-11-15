@@ -18,7 +18,9 @@
     "case:posters": "npm run case:layout && sh scripts/blender/render-posters.sh",
     "loops": "sh scripts/loops/cut-loops.sh",
     "case:models": "npm run case:layout && sh scripts/blender/export-models.sh",
-    "vendor:model-viewer": "sh scripts/vendor/model-viewer.sh"
+    "vendor:model-viewer": "sh scripts/vendor/model-viewer.sh",
+    "vendor:8thwall": "sh scripts/vendor/8thwall.sh",
+    "marker:card": "node scripts/marker/make-card.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "9.8.2",
@@ -31,6 +33,7 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@8thwall/image-target-cli": "1.0.0",
     "@axe-core/playwright": "4.14.0",
     "@lhci/cli": "0.16.1",
     "@playwright/test": "1.65.1",
@@ -49,6 +52,7 @@
     "iwer": "2.8.0",
     "jsdom": "31.0.1",
     "schema-dts": "2.1.0",
+    "sharp": "0.35.5",
     "tailwindcss": "4.3.3",
     "typescript": "^5",
     "unpdf": "2.1.0",
