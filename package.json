@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "measure:fcp": "node scripts/measure-fcp.mjs",
-    "stills": "node scripts/stills.mjs"
+    "stills": "node scripts/stills.mjs",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "next": "16.4.6",
