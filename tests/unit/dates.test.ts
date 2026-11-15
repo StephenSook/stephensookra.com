@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { formatDate, formatMonth, isPast } from "@/lib/dates";
+import { formatDate, formatMonth, formatShortDate, isPast } from "@/lib/dates";
+
+describe("formatShortDate", () => {
+  it("writes month and day only", () => {
+    expect(formatShortDate("2026-11-19")).toBe("Nov 19");
+  });
+});
 
 describe("formatDate", () => {
   it("formats an ISO timestamp as a short US date in UTC", () => {

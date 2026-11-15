@@ -19,6 +19,9 @@ const film = (id: string): ProjectLink => ({
   url: `https://www.youtube.com/watch?v=${id}`,
   label: "Watch the film",
 });
+/** Posters are frames from Stephen's own films (their YouTube thumbnails), re-encoded to 720 px WebP. */
+const poster = (slug: string, alt: string) => ({ src: `/posters/${slug}.webp`, width: 720, height: 405, alt });
+
 const devpost = (slug: string): ProjectLink => ({
   kind: "devpost",
   url: `https://devpost.com/software/${slug}`,
@@ -38,6 +41,10 @@ export const projects: Project[] = [
     result: { state: "waiting", event: SPECS_EVENT, resultsDate: "2026-11-19", source: { label: "Devpost event page" } },
     solo: true,
     repo: "StephenSook/case-light",
+    poster: poster(
+      "case-light",
+      "Title frame of the Case Light film: a wireframe mail case in the Lens Studio preview with one slot outlined in blue.",
+    ),
     links: [repo("case-light"), film("lymPgfFXAZ4"), devpost("case-light")],
     caseStudy: {
       evidence:
@@ -78,6 +85,10 @@ export const projects: Project[] = [
     solo: true,
     repo: "StephenSook/glare-zone",
     disclosure: "Glare reach is computed from geometry and the manufacturer's data, not measured with a light meter.",
+    poster: poster(
+      "glare-zone",
+      "Title frame of the Glare Zone film: two framed prints under gallery lights, with the seated glare zone shaded on the floor.",
+    ),
     links: [repo("glare-zone"), film("TMuU6nUypQo"), devpost("glare-zone")],
     caseStudy: {
       evidence:
@@ -152,6 +163,10 @@ export const projects: Project[] = [
     },
     solo: true,
     repo: "StephenSook/varsity",
+    poster: poster(
+      "varsity",
+      "Title frame of the VARSITY film: a stadium at night with the offside line drawn on the pitch.",
+    ),
     links: [repo("varsity"), film("7e88hmX8Puw")],
     caseStudy: {
       evidence:
@@ -189,6 +204,10 @@ export const projects: Project[] = [
     solo: true,
     repo: "StephenSook/instanter",
     disclosure: "All demo data is synthetic and labelled in the product; the statutory rules are real and public.",
+    poster: poster(
+      "instanter",
+      "Title frame of the Instanter film: 4 of 46 Georgia eviction deadlines are ones counting seven days by hand gets wrong.",
+    ),
     links: [repo("instanter"), film("AyvxUeE9sCs"), devpost("instanter")],
     caseStudy: {
       evidence: "Silver Agent and $3,000 in the Professional track of AWS Agents for Humans. Built solo.",
@@ -225,6 +244,7 @@ export const projects: Project[] = [
     // resume: "Won 1st of 238 and $5,000, YouCam API Hackathon"; V-REC winner email
     result: { state: "placed", prize: "1st of 238, $5,000", event: "YouCam API Hackathon", source: RESUME },
     repo: "StephenSook/aloud",
+    poster: poster("aloud", "Frame from the Aloud film: Stephen takes a selfie on an iPhone, framed by sound alone."),
     links: [repo("aloud"), film("2rPntXmDqHQ"), devpost("aloud-lxqr70")],
     caseStudy: {
       evidence: "1st of 238 submissions and $5,000 at the YouCam API hackathon (Perfect Corp).",

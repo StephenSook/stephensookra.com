@@ -12,6 +12,13 @@ export function formatDate(iso: string): string {
   return dayFormat.format(new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso));
 }
 
+const shortFormat = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+
+/** "Nov 19" from a yyyy-mm-dd date. */
+export function formatShortDate(isoDate: string): string {
+  return shortFormat.format(new Date(`${isoDate}T00:00:00Z`));
+}
+
 /** "March 2026" from a yyyy-mm month. */
 export function formatMonth(isoMonth: string): string {
   return monthFormat.format(new Date(`${isoMonth}-01T00:00:00Z`));
