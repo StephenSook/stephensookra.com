@@ -8,7 +8,7 @@ export type RepoStatus =
       /** ISO timestamp of the newest commit on the default branch. */
       lastCommit: string;
       stars: number;
-      /** Conclusion of the newest completed push-triggered workflow run on the default branch. */
+      /** Push-triggered workflow runs on the default branch's head commit: failing if any failed. */
       ci: "passing" | "failing" | "none";
       license: string | null;
     }
@@ -27,8 +27,21 @@ const repoSchema = z.object({
 });
 
 const branchSchema = z.object({
-  commit: z.object({ commit: z.object({ committer: z.object({ date: z.string() }) }) }),
+  commit: z.object({
+    sha: z.string().min(7),
+    commit: z.object({ committer: z.object({ date: z.string() }) }),
+  }),
 });
+
+/** Conclusions that say whether CI passed. Cancelled, skipped and neutral runs say nothing. */
+const VERDICTS = new Set(["success", "failure", "timed_out", "startup_failure", "action_required"]);
+
+/** CI for one commit: failing if any workflow failed, passing if all that gave a verdict passed. */
+function ciVerdict(conclusions: (string | null)[]): "passing" | "failing" | "none" {
+  const verdicts = conclusions.filter((c): c is string => c !== null && VERDICTS.has(c));
+  if (verdicts.length === 0) return "none";
+  return verdicts.every((c) => c === "success") ? "passing" : "failing";
+}
 
 const runsSchema = z.object({
   total_count: z.number().int().nonnegative(),
@@ -79,18 +92,15 @@ export async function getRepoStatus(repo: string, fetcher: typeof fetch = fetch)
     if (meta.private) return { state: "unavailable", repo, url };
 
     const branch = encodeURIComponent(meta.default_branch);
-    const [head, runs] = await Promise.all([
-      readJson(fetcher, `/repos/${repo}/branches/${branch}`, branchSchema),
-      readJson(
-        fetcher,
-        // Push runs only: scheduled uptime probes on the same branch are not CI.
-        `/repos/${repo}/actions/runs?branch=${branch}&event=push&status=completed&per_page=1`,
-        runsSchema,
-      ),
-    ]);
-
-    const latest = runs.workflow_runs[0];
-    const ci = runs.total_count === 0 || !latest ? "none" : latest.conclusion === "success" ? "passing" : "failing";
+    const head = await readJson(fetcher, `/repos/${repo}/branches/${branch}`, branchSchema);
+    // Every completed push run on the head commit, so one passing workflow cannot hide a
+    // failing sibling. Push runs only: scheduled uptime probes are not CI.
+    const runs = await readJson(
+      fetcher,
+      `/repos/${repo}/actions/runs?head_sha=${head.commit.sha}&event=push&status=completed&per_page=100`,
+      runsSchema,
+    );
+    const ci = ciVerdict(runs.workflow_runs.map((r) => r.conclusion));
 
     return {
       state: "ok",

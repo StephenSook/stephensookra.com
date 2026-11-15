@@ -57,26 +57,40 @@ describe("getRepoStatus", () => {
     expect(status.state === "ok" && status.ci).toBe("none");
   });
 
-  it("reports ci failing when the latest completed run did not succeed", async () => {
-    const { fetcher } = fakeFetch({
+  const withRuns = (conclusions: (string | null)[]) =>
+    fakeFetch({
       ...okRoutes,
       "/repos/StephenSook/case-light/actions/runs": {
-        body: { total_count: 4, workflow_runs: [{ conclusion: "failure" }] },
+        body: { total_count: conclusions.length, workflow_runs: conclusions.map((conclusion) => ({ conclusion })) },
       },
-    });
-    const status = await getRepoStatus("StephenSook/case-light", fetcher);
-    expect(status.state === "ok" && status.ci).toBe("failing");
+    }).fetcher;
+  const ciOf = async (conclusions: (string | null)[]) => {
+    const status = await getRepoStatus("StephenSook/case-light", withRuns(conclusions));
+    return status.state === "ok" ? status.ci : status.state;
+  };
+
+  it("reports ci failing when any workflow on the head commit failed, even if another passed", async () => {
+    expect(await ciOf(["success", "failure"])).toBe("failing");
+    expect(await ciOf(["timed_out", "success"])).toBe("failing");
   });
 
-  it("asks for the latest completed push run on the default branch, so scheduled probes do not count as CI", async () => {
+  it("reports ci passing when every workflow that finished on the head commit succeeded", async () => {
+    expect(await ciOf(["success", "success", "skipped"])).toBe("passing");
+  });
+
+  it("gives no verdict from cancelled or skipped runs alone", async () => {
+    expect(await ciOf(["cancelled", "skipped"])).toBe("none");
+  });
+
+  it("asks for every completed push run on the default branch's head commit, so scheduled probes do not count as CI", async () => {
     const { fetcher, calls } = fakeFetch(okRoutes);
     await getRepoStatus("StephenSook/case-light", fetcher);
     const runs = calls.find((c) => c.url.includes("/actions/runs"))!;
     const params = new URL(runs.url).searchParams;
-    expect(params.get("branch")).toBe("main");
+    expect(params.get("head_sha")).toBe("79a8d54");
     expect(params.get("event")).toBe("push");
     expect(params.get("status")).toBe("completed");
-    expect(params.get("per_page")).toBe("1");
+    expect(params.get("per_page")).toBe("100");
   });
 
   it.each([
