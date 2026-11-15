@@ -72,6 +72,16 @@ function Case({ onReady, onContextLost }: CaseSceneProps) {
   const router = useRouter();
   const { gl, scene, size, set, get, invalidate } = useThree();
   const rigRef = useRef<CaseRig | null>(null);
+  // Callbacks live in refs so a parent re-render (every light change re-renders the stage)
+  // never re-runs the effects below: re-running them cleared the light and rebuilt the atlas.
+  const onReadyRef = useRef(onReady);
+  const onLostRef = useRef(onContextLost);
+  const routerRef = useRef(router);
+  useEffect(() => {
+    onReadyRef.current = onReady;
+    onLostRef.current = onContextLost;
+    routerRef.current = router;
+  });
 
   // Build the case once, add it to the scene, dispose it on unmount.
   useEffect(() => {
@@ -115,13 +125,13 @@ function Case({ onReady, onContextLost }: CaseSceneProps) {
       if (atlas) rigRef.current?.setAtlas(atlas.texture, atlas.rects);
       invalidate();
       requestAnimationFrame(() => {
-        if (!cancelled) onReady?.();
+        if (!cancelled) onReadyRef.current?.();
       });
     });
     return () => {
       cancelled = true;
     };
-  }, [invalidate, onReady]);
+  }, [invalidate]);
 
   // Pointer: light the slot under it, tilt slightly towards it, click to open the project.
   useEffect(() => {
@@ -146,11 +156,11 @@ function Case({ onReady, onContextLost }: CaseSceneProps) {
     };
     const onClick = (e: MouseEvent) => {
       const slug = pickSlot(ndcOf(e), get().camera, layout);
-      if (slug) router.push(`/work/${slug}`);
+      if (slug) routerRef.current.push(`/work/${slug}`);
     };
     const onLost = (e: Event) => {
       e.preventDefault();
-      onContextLost?.();
+      onLostRef.current?.();
     };
     el.addEventListener("pointermove", onMove);
     el.addEventListener("pointerleave", onLeave);
@@ -165,7 +175,7 @@ function Case({ onReady, onContextLost }: CaseSceneProps) {
       unsubscribe();
       caseLight.set("scene", null);
     };
-  }, [gl, get, router, invalidate, onContextLost]);
+  }, [gl, get, invalidate]);
 
   // Ease lights and tilt; with frameloop="demand", keep asking for frames only while moving.
   useFrame((_state, dt) => {

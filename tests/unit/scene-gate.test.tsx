@@ -1,4 +1,5 @@
 import { act, render, screen } from "@testing-library/react";
+import { useEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CaseStageView as CaseStage } from "@/components/CaseStageView";
 import { caseLight } from "@/scene/caseLight";
@@ -111,6 +112,30 @@ describe("CaseStage", () => {
     current = { ...current, reducedMotion: true };
     act(() => listeners.forEach((fn) => fn()));
     expect(screen.queryByTestId("scene")).toBeNull();
+  });
+
+  it("keeps the scene mounted and its callbacks stable while the light changes", async () => {
+    const seen = new Set<unknown>();
+    let mounts = 0;
+    const Scene = ({ onReady, onContextLost }: { onReady?: () => void; onContextLost?: () => void }) => {
+      seen.add(onReady);
+      seen.add(onContextLost);
+      useEffect(() => {
+        mounts++;
+        onReady?.();
+      }, []); // eslint-disable-line react-hooks/exhaustive-deps
+      return <div data-testid="scene" />;
+    };
+    render(
+      <CaseStage variant="hero" readEnv={env()} loadScene={async () => ({ default: Scene })} waitForIdle={() => Promise.resolve()}>
+        {poster}
+      </CaseStage>,
+    );
+    await flush();
+    await flush();
+    for (const slug of ["case-light", "aloud", null, "varsity"]) act(() => caseLight.set("scene", slug));
+    expect(mounts).toBe(1);
+    expect(seen.size).toBe(2);
   });
 
   it("exposes the lit slug for the grid and tests", async () => {

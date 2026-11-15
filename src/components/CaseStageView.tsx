@@ -1,5 +1,5 @@
 // Imported only through the client CaseStage, so it may take function props (test seams).
-import { useEffect, useState, type ComponentType } from "react";
+import { useCallback, useEffect, useState, type ComponentType } from "react";
 import type { CaseSceneProps } from "@/scene/CaseScene";
 import { useCaseLight } from "@/scene/caseLight";
 import { afterLoadAndIdle, onSceneEnvChange, readSceneEnv, shouldLoadScene, type SceneEnv } from "@/scene/gate";
@@ -39,12 +39,23 @@ export function CaseStageView({
   const [open, setOpen] = useState(false);
   const { slug } = useCaseLight();
 
-  // Track the gate: screen width, pointer, reduced motion, WebGL2.
+  // Track the gate: screen width, pointer, reduced motion, WebGL2. When it closes, the scene
+  // unmounts; resetting the phase means a later reopen waits for a fresh first frame.
   useEffect(() => {
-    const update = () => setOpen(shouldLoadScene(readEnv()));
+    const update = () => {
+      const isOpen = shouldLoadScene(readEnv());
+      setOpen(isOpen);
+      if (!isOpen) setPhase("poster");
+    };
     update();
     return onEnvChange(update);
   }, [readEnv, onEnvChange]);
+
+  const handleReady = useCallback(() => setPhase("ready"), []);
+  const handleContextLost = useCallback(() => {
+    setLost(true);
+    setPhase("poster");
+  }, []);
 
   // Load the scene once the gate opens (after load and idle); keep the module for reuse.
   useEffect(() => {
@@ -75,13 +86,7 @@ export function CaseStageView({
       <div className="case-stage__poster">{children}</div>
       {showScene ? (
         <div className="case-stage__scene">
-          <Scene
-            onReady={() => setPhase("ready")}
-            onContextLost={() => {
-              setLost(true);
-              setPhase("poster");
-            }}
-          />
+          <Scene onReady={handleReady} onContextLost={handleContextLost} />
         </div>
       ) : null}
     </div>
