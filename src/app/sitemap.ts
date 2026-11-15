@@ -2,7 +2,6 @@ import type { MetadataRoute } from "next";
 import { pagedProjects } from "@/content";
 import { SITE_URL } from "@/lib/site";
 
-// /case is a noindex placeholder in tier 1, so it stays out until the 3D case ships.
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: `${SITE_URL}/`, priority: 1 },
@@ -14,5 +13,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/resume`, priority: 0.9 },
     { url: `${SITE_URL}/about`, priority: 0.6 },
     { url: `${SITE_URL}/proof`, priority: 0.6 },
+    { url: `${SITE_URL}/case`, priority: 0.5 },
   ];
 }

@@ -24,7 +24,7 @@ export function CasePoster() {
   return (
     <picture className="case-poster">
       <source media="(prefers-color-scheme: dark)" srcSet={dark} sizes={SIZES} />
-      {/* eslint-disable-next-line @next/next/no-img-element -- art direction needs a plain img inside picture */}
+      {/* A plain img inside picture: art direction by colour scheme (props from getImageProps). */}
       <img {...light} alt="" />
     </picture>
   );

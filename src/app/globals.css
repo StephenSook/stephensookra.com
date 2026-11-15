@@ -297,6 +297,61 @@ p {
   margin-bottom: 0.75rem;
 }
 
+/* ------------------------------------------------------- the 3D case stage */
+
+/* The poster sits underneath; the transparent canvas fades in over it, then the poster
+   fades out so the two never show at once. */
+.case-stage {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 1.5rem;
+}
+
+.case-stage--full {
+  aspect-ratio: auto;
+  height: calc(100dvh - 9rem);
+  min-height: 22rem;
+}
+
+.case-stage__poster,
+.case-stage__scene {
+  position: absolute;
+  inset: 0;
+}
+
+.case-stage__poster {
+  transition: opacity 300ms var(--ease-out);
+}
+
+.case-stage__poster img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.case-stage__scene {
+  opacity: 0;
+  transition: opacity 450ms var(--ease-out);
+}
+
+.case-stage[data-scene="ready"] .case-stage__scene {
+  opacity: 1;
+}
+
+.case-stage[data-scene="ready"] .case-stage__poster {
+  opacity: 0;
+  transition-delay: 300ms;
+}
+
+.case-page__head {
+  padding-bottom: 1rem;
+}
+
+.case-page__stage {
+  padding-inline: var(--gutter);
+}
+
 /* ---------------------------------------------------------------- the case */
 
 /*
