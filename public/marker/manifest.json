@@ -1,8 +1,8 @@
 {
-  "cardSha256": "996fa87fcbff66900e3f35ee7aefbac186452ba1577d94785487fd5402d5c90a",
+  "cardSha256": "0c51a0fdafe46bc5fe806b8e2f646dd9c2d7ac65d0472ee9627088202667fa0a",
   "tool": "@8thwall/image-target-cli 1.0.0",
-  "card": "/marker/20261115192009-996fa87fcbff/card.png",
-  "pdf": "/marker/20261115192009-996fa87fcbff/card.pdf",
+  "card": "/marker/20261115202229-0c51a0fdafe4/card.png",
+  "pdf": "/marker/20261115202229-0c51a0fdafe4/card.pdf",
   "width": 1600,
   "height": 1200,
   "caseBox": {
@@ -14,7 +14,7 @@
   "target": {
     "name": "card",
     "type": "PLANAR",
-    "imagePath": "/marker/20261115192009-996fa87fcbff/card-luminance.png",
+    "imagePath": "/marker/20261115202229-0c51a0fdafe4/card-luminance.png",
     "properties": {
       "left": 0,
       "top": 0,
