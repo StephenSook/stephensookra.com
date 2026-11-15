@@ -7,9 +7,9 @@ import marker from "../../public/marker/manifest.json";
 import { MarkerArView } from "./MarkerArView";
 
 /** The marker chunk (the engine, three.js and the case model) loads on the press only. */
-const start = (canvas: HTMLCanvasElement, onEvent: (event: SessionEvent) => void) =>
+const start = (canvas: HTMLCanvasElement, onEvent: (event: SessionEvent) => void, isCurrent: () => boolean) =>
   import("@/ar/marker/session").then((m) =>
-    m.startMarker({ canvas, target: marker.target, caseBox: marker.caseBox, glb: arManifest.glb, onEvent }),
+    m.startMarker({ canvas, target: marker.target, caseBox: marker.caseBox, glb: arManifest.glb, onEvent, isCurrent }),
   );
 
 /** Client boundary for marker AR: the server page passes the tested note. */

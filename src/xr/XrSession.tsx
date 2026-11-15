@@ -191,14 +191,26 @@ function HeadsetCase({
   const getTexture = useCallback(() => texture.current, []);
   useEffect(() => () => video.stop(), [video]);
 
+  /**
+   * Shows or hides the case. Hidden, it also takes no pointers: the pointer library does not
+   * skip invisible objects, so an unplaced case (still where the last session left it) would
+   * otherwise catch selects meant for the wall, and open cards or end the session unseen.
+   */
+  const showCase = useCallback((on: boolean) => {
+    placed.current = on;
+    if (!group.current) return;
+    group.current.visible = on;
+    group.current.intersectChildren = on;
+  }, []);
+  useEffect(() => showCase(false), [showCase]);
+
   // When a session ends, the next one starts fresh: placed again from the new head pose,
   // with no card out (which also stops the video).
   useEffect(
     () =>
       store.subscribe((state, prev) => {
         if (!prev.session || state.session) return;
-        placed.current = false;
-        if (group.current) group.current.visible = false;
+        showCase(false);
         try {
           anchor.current?.delete();
         } catch {
@@ -213,7 +225,7 @@ function HeadsetCase({
         selectedRef.current = null;
         setSelected(null);
       }),
-    [store],
+    [store, showCase],
   );
 
   useEffect(() => {
@@ -245,15 +257,14 @@ function HeadsetCase({
       if (placed.current || !pose || onHintExit.current || !holder) return;
       holder.position.copy(pose.position);
       holder.quaternion.copy(pose.quaternion);
-      holder.visible = true;
-      placed.current = true;
+      showCase(true);
       setOnWall(true);
       onPlacedRef.current();
       anchorWanted.current = pose;
     };
     session.addEventListener("select", place);
     return () => session.removeEventListener("select", place);
-  }, [session, mode, store]);
+  }, [session, mode, store, showCase]);
 
   useFrame((state, dt) => {
     // Passthrough: anchor the hung case, inside this frame (an anchor asked for after the
@@ -299,8 +310,7 @@ function HeadsetCase({
         const p = placeCase({ position, quaternion });
         group.current.position.copy(p.position);
         group.current.rotation.set(0, p.rotationY, 0);
-        group.current.visible = true;
-        placed.current = true;
+        showCase(true);
         onPlacedRef.current();
       }
     }
@@ -309,6 +319,7 @@ function HeadsetCase({
 
   /** Selecting the open card's slot again, or Close, puts the card back. */
   function select(slug: string | null) {
+    if (!placed.current) return; // a case not yet in place takes no selects
     const next = slug === null || selectedRef.current === slug ? null : slug;
     selectedRef.current = next;
     setSelected(next);
@@ -365,7 +376,7 @@ function HeadsetCase({
           position={[0, EXIT.y, layout.depth / 2]}
           pointerEventsType={{ deny: "grab" }}
           onPointerDown={(e) => presses.down("exit", e.pointerId)}
-          onPointerUp={(e) => presses.up("exit", e.pointerId) && void store.getState().session?.end()}
+          onPointerUp={(e) => presses.up("exit", e.pointerId) && placed.current && void store.getState().session?.end()}
           onPointerOver={() => pointing.over("exit")}
           onPointerOut={(e) => {
             pointing.out("exit");

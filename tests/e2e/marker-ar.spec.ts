@@ -173,6 +173,20 @@ test("when the tracker cannot load, the page says so and the camera never opens"
   });
 });
 
+test("when only the tracking chunk fails, the page says so, and a later press still starts", async ({ baseURL }) => {
+  await withCamera(baseURL, "card", async (page) => {
+    const chunk = /\/vendor\/8thwall\/[^/]+\/xr-tracking\.js$/;
+    await page.route(chunk, (route) => route.fulfill({ status: 404, body: "" }));
+    await open(page);
+    await page.getByRole("button", { name: "Start the camera" }).click();
+    await expect(state(page)).toHaveAttribute("data-state", "failed", { timeout: 40_000 });
+    expect(await trackStates(page)).toEqual([]);
+    await page.unroute(chunk);
+    await page.getByRole("button", { name: "Start the camera" }).click();
+    await expect(state(page)).toHaveAttribute("data-state", "tracking", { timeout: 30_000 });
+  });
+});
+
 test("the card page offers the card as a PDF and a PNG that both download", async ({ page, request }) => {
   await page.goto("/ar/marker/card");
   await expect(page.getByRole("img", { name: /stephensookra\.com\/ar\/marker/ })).toBeVisible();

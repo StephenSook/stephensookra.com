@@ -9,8 +9,14 @@ export type MarkerArViewProps = {
   note: string;
   /** The printable card. */
   cardHref: string;
-  /** Loads the marker chunk and starts the camera and tracker on the canvas (the press only). */
-  start: (canvas: HTMLCanvasElement, onEvent: (event: SessionEvent) => void) => Promise<MarkerSession>;
+  /** Loads the marker chunk and starts the camera and tracker on the canvas (the press only).
+   * isCurrent turns false once the run has ended, so a start still loading can give up before
+   * it touches the engine or the camera. */
+  start: (
+    canvas: HTMLCanvasElement,
+    onEvent: (event: SessionEvent) => void,
+    isCurrent: () => boolean,
+  ) => Promise<MarkerSession>;
   /** True when the browser already blocks the camera for this site. */
   cameraBlocked: () => Promise<boolean>;
   /** Why the camera did not open, asked after it failed. */
@@ -23,13 +29,15 @@ const MAX_DPR = 2;
 /**
  * The case on the printed card, through the phone's camera. Nothing loads before the press.
  * The camera view opens as a modal dialog over the page; Stop, Escape, leaving the page or
- * hiding it all turn the camera off. Each run has an id, so a late event or a late start
- * from an ended run changes nothing.
+ * hiding it all turn the camera off, also while the camera is still starting. Each run has an
+ * id, so a late event or a late start from an ended run changes nothing.
  */
 export function MarkerArView({ note, cardHref, start, cameraBlocked, whyNoCamera }: MarkerArViewProps) {
   const [state, dispatch] = useReducer(next, "idle");
   const session = useRef<MarkerSession | null>(null);
   const run = useRef(0);
+  /** From the press until the run ends, including while the camera is still starting. */
+  const live = useRef(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const startButton = useRef<HTMLButtonElement>(null);
@@ -38,6 +46,7 @@ export function MarkerArView({ note, cardHref, start, cameraBlocked, whyNoCamera
   /** Ends the current run: later events from it are ignored, and its camera is turned off. */
   const end = useCallback(() => {
     run.current += 1;
+    live.current = false;
     session.current?.stop();
     session.current = null;
   }, []);
@@ -51,6 +60,7 @@ export function MarkerArView({ note, cardHref, start, cameraBlocked, whyNoCamera
     if (isRunning) return;
     end();
     const id = run.current;
+    live.current = true;
     dispatch("start");
     const stage = dialog.current!;
     if (typeof stage.showModal === "function") stage.showModal();
@@ -72,7 +82,7 @@ export function MarkerArView({ note, cardHref, start, cameraBlocked, whyNoCamera
       void whyNoCamera().then(dispatch);
     };
     try {
-      const s = await start(c, onEvent);
+      const s = await start(c, onEvent, () => id === run.current);
       if (id !== run.current) return s.stop(); // stopped while it was starting
       session.current = s;
     } catch {
@@ -94,13 +104,13 @@ export function MarkerArView({ note, cardHref, start, cameraBlocked, whyNoCamera
   // Leaving or hiding the page turns the camera off (the camera light goes off too).
   useEffect(() => {
     const hide = () => {
-      if (document.visibilityState === "hidden" && session.current) {
+      if (document.visibilityState === "hidden" && live.current) {
         end();
         dispatch("hidden");
       }
     };
     const leave = () => {
-      if (session.current) {
+      if (live.current) {
         end();
         dispatch("hidden");
       }

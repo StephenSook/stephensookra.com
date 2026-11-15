@@ -47,36 +47,68 @@ export interface XR8Api {
 
 type EngineWindow = Window & { XR8?: XR8Api };
 
+/** How long the engine script, and then its image-target chunk, may take before we give up. */
+export const READY_MS = 30_000;
+
+let script: Promise<XR8Api> | null = null;
 let loading: Promise<XR8Api> | null = null;
 
+function withTimeout<T>(work: Promise<T>, ms: number, why: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(why)), ms);
+  });
+  return Promise.race([work, late]).finally(() => clearTimeout(timer));
+}
+
+/** Adds xr.js once and resolves with XR8 when it says it is loaded. A failure is forgotten. */
+function addScript(src: string): Promise<XR8Api> {
+  const w = window as EngineWindow;
+  if (w.XR8) return Promise.resolve(w.XR8);
+  script ??= new Promise<XR8Api>((resolve, reject) => {
+    const tag = document.createElement("script");
+    const settle = (finish: () => void) => {
+      clearTimeout(timer);
+      window.removeEventListener("xrloaded", loaded);
+      finish();
+    };
+    const fail = (why: string) =>
+      settle(() => {
+        script = null;
+        tag.remove();
+        reject(new Error(why));
+      });
+    function loaded() {
+      settle(() => (w.XR8 ? resolve(w.XR8) : reject(new Error("the 8th Wall engine loaded without XR8"))));
+    }
+    tag.src = src;
+    tag.async = true;
+    tag.onerror = () => fail("the 8th Wall engine did not load");
+    const timer = setTimeout(() => fail("the 8th Wall engine did not start in time"), READY_MS);
+    window.addEventListener("xrloaded", loaded);
+    document.head.append(tag);
+  });
+  return script;
+}
+
 /**
- * Adds the engine's script once (with its image-target chunk) and resolves with XR8. A failed
- * load is forgotten, so a later press can try again.
+ * Loads the engine, then its image-target chunk (xr-tracking.js) as a separate, awaited step:
+ * with the chunk preloaded through the script tag instead, a chunk that fails to load leaves
+ * the engine silent (no XR8, no xrloaded) and nothing would ever settle. Both steps have a
+ * time limit, and a failure is forgotten, so a later press can try again.
  */
 export function loadEngine(src = ENGINE_SRC): Promise<XR8Api> {
-  const w = window as EngineWindow;
-  if (w.XR8?.XrController) return Promise.resolve(w.XR8);
-  loading ??= new Promise<XR8Api>((resolve, reject) => {
-    const fail = (why: string) => {
-      loading = null;
-      script.remove();
-      reject(new Error(why));
-    };
-    const ready = async () => {
-      const xr8 = w.XR8;
-      if (!xr8) return fail("the 8th Wall engine loaded without XR8");
-      // The chunk normally arrives with the script (data-preload-chunks); ask once more if not.
-      if (!xr8.XrController) await xr8.loadChunk?.("slam").catch(() => {});
-      if (!xr8.XrController) return fail("the image target chunk did not load");
-      resolve(xr8);
-    };
-    const script = document.createElement("script");
-    script.src = src;
-    script.async = true;
-    script.dataset.preloadChunks = "slam";
-    script.onerror = () => fail("the 8th Wall engine did not load");
-    window.addEventListener("xrloaded", () => void ready(), { once: true });
-    document.head.append(script);
+  loading ??= (async () => {
+    const xr8 = await addScript(src);
+    if (!xr8.XrController) {
+      if (!xr8.loadChunk) throw new Error("this engine build cannot load image targets");
+      await withTimeout(xr8.loadChunk("slam"), READY_MS, "the image target chunk did not load in time");
+    }
+    if (!xr8.XrController) throw new Error("the image target chunk did not load");
+    return xr8;
+  })().catch((error: unknown) => {
+    loading = null;
+    throw error;
   });
   return loading;
 }

@@ -14,6 +14,8 @@ export type MarkerSessionOptions = {
   caseBox: CaseBox;
   glb: string;
   onEvent: (event: SessionEvent) => void;
+  /** False once the page has ended this run (Stop, hidden, left): give up before using XR8. */
+  isCurrent: () => boolean;
 };
 
 export type MarkerSession = { stop(): void };
@@ -22,6 +24,8 @@ const NEAR = 0.01;
 const FAR = 100;
 
 let caseModel: Promise<THREE.Group> | null = null;
+/** XR8 is one engine per page: the run that owns it, and how to end that run. */
+let owner: { stop(): void } | null = null;
 function loadCase(url: string) {
   caseModel ??= new GLTFLoader()
     .loadAsync(url)
@@ -39,9 +43,23 @@ function projection(xr8: XR8Api, width: number, height: number) {
   });
 }
 
-/** Starts the camera and the card tracker on `canvas`. Rejects if the engine or the case fails to load. */
-export async function startMarker({ canvas, target, caseBox, glb, onEvent }: MarkerSessionOptions): Promise<MarkerSession> {
+/**
+ * Starts the camera and the card tracker on `canvas`. Rejects if the engine or the case fails
+ * to load. A run that is no longer current by the time they have loaded never touches XR8, and
+ * a run's stop() only stops the engine while that run still owns it, so an old run cannot end
+ * a newer one.
+ */
+export async function startMarker({
+  canvas,
+  target,
+  caseBox,
+  glb,
+  onEvent,
+  isCurrent,
+}: MarkerSessionOptions): Promise<MarkerSession> {
   const [xr8, model] = await Promise.all([loadEngine(), loadCase(glb)]);
+  if (!isCurrent()) return { stop() {} };
+  owner?.stop(); // a run the page lost track of: end it before taking the engine
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera();
@@ -121,14 +139,19 @@ export async function startMarker({ canvas, target, caseBox, glb, onEvent }: Mar
   xr8.run({ canvas, allowedDevices: xr8.XrConfig.device().ANY });
 
   let stopped = false;
-  return {
+  const session: MarkerSession = {
     stop() {
       if (stopped) return;
       stopped = true;
-      xr8.stop(); // ends the camera stream, so the camera light goes off
-      xr8.clearCameraPipelineModules();
+      if (owner === session) {
+        owner = null;
+        xr8.stop(); // ends the camera stream, so the camera light goes off
+        xr8.clearCameraPipelineModules();
+      }
       renderer?.dispose();
       renderer = null;
     },
   };
+  owner = session;
+  return session;
 }

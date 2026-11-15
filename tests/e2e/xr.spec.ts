@@ -464,3 +464,30 @@ test("in an emulated Quest 3 looking at the floor: no wall, so nothing is placed
   await context.close();
 });
 
+
+test("in an emulated Quest 3: after VR, the unplaced case in passthrough takes no selects", async ({ browser }) => {
+  // Looking at the floor: no wall, so the case stays unplaced, still where VR left it.
+  const down = TURNED.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -1.3));
+  const { context, page, inputsReady } = await questPage(browser, "controller", installRoom(down));
+  await page.goto("/case");
+  await page.getByRole("button", { name: "Enter VR" }).click();
+  const status = page.getByRole("status");
+  await expect(status).toHaveText("In VR", { timeout: 15_000 });
+  await inputsReady();
+  // In VR the case stood 1 m ahead (along the head's yaw, +z here), facing back.
+  const vrCentre = new THREE.Vector3(0, EYE - BELOW_EYE, CASE_DISTANCE);
+  const inVr = (x: number, y: number) => vrCentre.clone().add(new THREE.Vector3(-x, y, -layout.depth / 2));
+  await selectUntil(page, "controller", { at: inVr(0, EXIT_Y), name: "exit" }, "Left VR", RIGHT_TURNED);
+
+  await page.getByRole("button", { name: "Place on your wall" }).click();
+  await expect(status).toHaveText("Entering passthrough");
+  await frames(page, 10);
+  const plane = pickPlanes(layout).find((p) => p.slug === "instanter")!;
+  await point(page, RIGHT_TURNED, inVr(plane.x, plane.y).sub(RIGHT_TURNED));
+  await frames(page, 5);
+  await expect(page.locator(".xr-session")).not.toHaveAttribute("data-pointing", "instanter");
+  await select(page, "controller");
+  await expect(status).toHaveText("Entering passthrough");
+  expect((await videos(page)).filter((v) => v.playing)).toEqual([]);
+  await context.close();
+});

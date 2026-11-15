@@ -13,13 +13,15 @@ function fakeStart() {
   let emit: (e: SessionEvent) => void = () => {};
   let release: () => void = () => {};
   const gate = new Promise<void>((r) => (release = r));
-  const start = vi.fn(async (canvas: HTMLCanvasElement, onEvent: (e: SessionEvent) => void) => {
+  let current: () => boolean = () => true;
+  const start = vi.fn(async (canvas: HTMLCanvasElement, onEvent: (e: SessionEvent) => void, isCurrent: () => boolean) => {
     expect(canvas.tagName).toBe("CANVAS");
     emit = onEvent;
+    current = isCurrent;
     await gate;
     return { stop };
   });
-  return { start, stop, release, emit: (e: SessionEvent) => act(() => emit(e)) };
+  return { start, stop, release, emit: (e: SessionEvent) => act(() => emit(e)), isCurrent: () => current() };
 }
 
 function view(overrides: Partial<MarkerArViewProps> = {}) {
@@ -131,6 +133,44 @@ describe("MarkerArView", () => {
     expect(f.stop).toHaveBeenCalledTimes(1);
     f.emit("found"); // a late event from the ended run changes nothing
     expect(root().dataset.state).toBe("idle");
+  });
+
+  it("hiding the page while the camera is still starting cancels that start", async () => {
+    const f = fakeStart();
+    const { root } = view({ start: f.start });
+    await press();
+    expect(f.isCurrent()).toBe(true);
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    visibility.mockRestore();
+    expect(root().dataset.state).toBe("stopped");
+    expect(f.isCurrent()).toBe(false); // the start is told it is no longer wanted
+    f.release();
+    await flush();
+    expect(f.stop).toHaveBeenCalledTimes(1); // and if it finishes anyway, its camera is turned off
+    expect(root().dataset.state).toBe("stopped");
+  });
+
+  it("Stop then Start again during startup: only the newest start is current", async () => {
+    const first = fakeStart();
+    const second = fakeStart();
+    let calls = 0;
+    const start = vi.fn((...args: Parameters<typeof first.start>) => (++calls === 1 ? first.start(...args) : second.start(...args)));
+    const { root } = view({ start });
+    await press();
+    fireEvent.click(screen.getByRole("button", { name: "Stop the camera" }));
+    await flush();
+    await press();
+    expect(first.isCurrent()).toBe(false);
+    expect(second.isCurrent()).toBe(true);
+    second.release();
+    first.release();
+    await flush();
+    second.emit("camera");
+    expect(root().dataset.state).toBe("scanning");
+    expect(second.stop).not.toHaveBeenCalled();
   });
 
   it("Escape stops the camera (the dialog's cancel)", async () => {
