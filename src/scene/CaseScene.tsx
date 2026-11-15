@@ -20,11 +20,13 @@ export type CaseSceneProps = {
   onContextLost?: () => void;
 };
 
-/** CSS tokens, read live so a colour-scheme change recolours the case. */
+/**
+ * The wood and the slot backs come from the case model, the same in both colour schemes
+ * (the case is a dark object on any page). The slot light is the site's accent token.
+ */
 function readTokens(): Tokens {
-  const css = getComputedStyle(document.documentElement);
-  const token = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
-  return { wood: token("--wood", "#8a6a4a"), back: token("--line", "#d6d9df"), light: token("--slot", "#ffb547") };
+  const light = getComputedStyle(document.documentElement).getPropertyValue("--slot").trim() || "#ffb547";
+  return { wood: specJson.colors.wood, back: specJson.colors.back, light };
 }
 
 /** Packs the project posters into one texture, with a cover-cropped atlas rect per slot. */
@@ -194,9 +196,11 @@ function Case({ onReady, onContextLost }: CaseSceneProps) {
 /** The lit letter case. Lazy-loaded by CaseStage; never rendered on the server. */
 export default function CaseScene(props: CaseSceneProps) {
   return (
-    <Canvas dpr={[1, 1.75]} frameloop="demand" gl={{ antialias: true, alpha: true }} aria-hidden="true">
-      <ambientLight intensity={1.1} />
-      <directionalLight position={[0.6, 1.2, 2]} intensity={1.6} />
+    // flat: no tone mapping, so the wood keeps the model's colour instead of a washed-out one.
+    <Canvas dpr={[1, 1.75]} frameloop="demand" flat gl={{ antialias: true, alpha: true }} aria-hidden="true">
+      {/* Matched to the Blender poster's lighting, so the crossfade shows no step. */}
+      <ambientLight intensity={1.4} />
+      <directionalLight position={[0.6, 1.2, 2]} intensity={2} />
       <Case {...props} />
     </Canvas>
   );

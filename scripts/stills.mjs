@@ -28,9 +28,18 @@ for (const route of routes) {
       // Stills need settled pixels, not a quiet network: background prefetches may still run.
       await page.waitForLoadState("networkidle", { timeout: 5000 }).catch(() => {});
       // Where the 3D case can load (wide screens), wait for its first frame; elsewhere the poster stays.
+      // Then wait for the crossfade to settle (poster gone, scene opaque): a fixed delay once
+      // caught the stage mid-fade, so the whole case read as 70% transparent.
       if (width.name === "1280" && (await page.locator(".case-stage").count()) > 0) {
-        await page.waitForSelector(".case-stage[data-scene=ready]", { timeout: 20000 }).catch(() => {});
-        await page.waitForTimeout(800);
+        await page.waitForSelector(".case-stage[data-scene=ready]", { timeout: 20000 });
+        await page.waitForFunction(
+          () => {
+            const op = (sel) => Number(getComputedStyle(document.querySelector(sel)).opacity);
+            return op(".case-stage__poster") === 0 && op(".case-stage__scene") === 1;
+          },
+          null,
+          { timeout: 10000 },
+        );
       }
       const slug = route === "/" ? "home" : route.replace(/^\//, "").replace(/\//g, "_");
       const file = join(outDir, `${slug}-${width.name}-${colorScheme}.png`);

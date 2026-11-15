@@ -27,5 +27,9 @@
       "instanter",
       "aloud"
     ]
+  },
+  "colors": {
+    "wood": "#573418",
+    "back": "#100c09"
   }
 }

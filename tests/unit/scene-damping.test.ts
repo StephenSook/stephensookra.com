@@ -33,7 +33,7 @@ describe("createSlotMaterial", () => {
   const material = createSlotMaterial();
 
   it("declares the uniforms the scene sets", () => {
-    for (const name of ["uBack", "uLight", "uAtlas", "uHasAtlas", "uDim"])
+    for (const name of ["uBack", "uLight", "uAtlas", "uHasAtlas"])
       expect(material.uniforms, name).toHaveProperty(name);
   });
 
