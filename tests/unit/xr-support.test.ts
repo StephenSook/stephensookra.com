@@ -123,6 +123,37 @@ describe("headset test record", () => {
     };
     expect(doorNote(failed)).not.toMatch(/Tested on Meta/);
   });
+
+  const partial = {
+    status: "partial" as const,
+    date: "2026-11-15",
+    evidence: "emulator screenshots and a screen recording",
+    ran: "Enters VR and renders the case",
+    notRun: "card pull not run",
+  };
+
+  it("needs a date, evidence, what ran and what did not for a partial run", () => {
+    const { ran: _ran, ...noRan } = partial;
+    expect(() => xrTestsSchema.parse({ ...notRun, androidXrEmulator: { name: "Android XR Emulator", ...noRan } })).toThrow();
+    const { date: _date, ...noDate } = partial;
+    expect(() => xrTestsSchema.parse({ ...notRun, androidXrEmulator: { name: "Android XR Emulator", ...noDate } })).toThrow();
+    expect(() => xrTestsSchema.parse({ ...notRun, androidXrEmulator: { name: "Android XR Emulator", ...partial } })).not.toThrow();
+  });
+
+  it("treats a partial Android XR run as not passed: the door line does not change and never names it", () => {
+    const tests: XrTests = { ...notRun, androidXrEmulator: { name: "Android XR Emulator", ...partial } };
+    expect(doorNote(tests)).toBe(doorNote(notRun));
+    expect(doorNote(tests)).not.toMatch(/Android/);
+  });
+
+  it("records the Android XR emulator run as partial, never as passed", () => {
+    const run = xrTests.androidXrEmulator;
+    expect(run.status).toBe("partial");
+    if (run.status !== "partial") return;
+    expect(run.date).toBe("2026-11-15");
+    expect(run.ran).toMatch(/^Enters VR in Chrome 138 on the Android XR emulator and renders the case/);
+    expect(run.notRun).toMatch(/card pull not run/i);
+  });
 });
 
 describe("testedNote (every other mode's line)", () => {
@@ -147,6 +178,23 @@ describe("testedNote (every other mode's line)", () => {
     );
   });
 
+  it("says partly tested for a shown platform with a partial run, never tested", () => {
+    const tests: XrTests = {
+      ...notRun,
+      iphoneQuickLook: {
+        name: "iPhone with AR Quick Look",
+        status: "partial",
+        date: "2026-11-20",
+        evidence: "Stephen, iPhone 17 Pro",
+        ran: "opens the viewer",
+        notRun: "placing in the room not run",
+      },
+    };
+    const note = testedNote(tests, ["iphoneQuickLook", "androidSceneViewer"], "on a phone");
+    expect(note).toBe("Partly tested on iPhone with AR Quick Look. Built for Android with Scene Viewer, not yet tested.");
+    expect(note).not.toMatch(/^Tested/);
+  });
+
   it("adds a passthrough line only when its record differs from the headset's", () => {
     const run = { date: "2026-11-20", evidence: "Stephen, Quest 3S" };
     expect(passthroughNote(notRun)).toBe(""); // the headset line already says not yet tested
@@ -158,10 +206,15 @@ describe("testedNote (every other mode's line)", () => {
     expect(passthroughNote(wallFailed)).toBe("The last test of Place on your wall on Meta Quest 3S did not pass.");
     const onlyWall: XrTests = { ...notRun, questPassthrough: { name: "Meta Quest 3S", status: "passed", ...run } };
     expect(passthroughNote(onlyWall)).toBe("Place on your wall was tested on Meta Quest 3S.");
+    const wallPartial: XrTests = {
+      ...vrPassed,
+      questPassthrough: { name: "Meta Quest 3S", status: "partial", ...run, ran: "finds a wall", notRun: "hanging the case not run" },
+    };
+    expect(passthroughNote(wallPartial)).toBe("Place on your wall was partly tested on Meta Quest 3S.");
   });
 
   it("covers every key in the committed record (no mode without a line)", () => {
-    for (const key of Object.keys(base)) expect(base[key as keyof XrTests].status).toMatch(/not run|passed|failed/);
+    for (const key of Object.keys(base)) expect(base[key as keyof XrTests].status).toMatch(/not run|passed|failed|partial/);
     expect(Object.keys(base).sort()).toEqual(Object.keys(notRun).sort());
   });
 });
