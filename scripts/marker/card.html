@@ -1,0 +1,140 @@
+<!doctype html>
+<!--
+  The printable marker card. scripts/marker/make-card.mjs renders this one file twice: a PNG
+  screenshot (the image target the camera looks for) and a vector PDF for printing, so the
+  two always match. Sizes are in container units, so the card scales to any print size.
+  The card is landscape (4:3); image-target-cli stores it as a rotated target. The case picture
+  is the current light poster, trimmed to the case (?poster=<file URL>).
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Marker card</title>
+    <style>
+      @font-face {
+        font-family: "Familjen Grotesk";
+        font-weight: 400;
+        src: url("../../public/xr/fonts/familjen-grotesk-latin-400-normal.woff") format("woff");
+      }
+      @font-face {
+        font-family: "Familjen Grotesk";
+        font-weight: 600;
+        src: url("../../public/xr/fonts/familjen-grotesk-latin-600-normal.woff") format("woff");
+      }
+      @page {
+        size: letter landscape;
+        margin: 0;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      html,
+      body {
+        background: #ffffff;
+      }
+      body.png {
+        width: 800px;
+        height: 600px;
+      }
+      body.pdf {
+        width: 279.4mm;
+        height: 215.9mm;
+        display: grid;
+        place-items: center;
+      }
+      .sheet {
+        display: grid;
+        justify-items: center;
+        gap: 6mm;
+      }
+      /* The cut line sits outside the card, so it is not part of the image the camera matches. */
+      .cut {
+        padding: 3mm;
+        border: 0.3mm dashed #9aa1ad;
+      }
+      .card {
+        container-type: size;
+        width: 800px;
+        height: 600px;
+        background: #ffffff;
+        color: #14161b;
+        font-family: "Familjen Grotesk", sans-serif;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        row-gap: 2.5cqw;
+        padding: 4.5cqw 5cqw;
+      }
+      .pdf .card {
+        width: 200mm;
+        height: 150mm;
+      }
+      .head,
+      .foot {
+        display: flex;
+        align-items: baseline;
+      }
+      .head {
+        justify-content: space-between;
+        gap: 3cqw;
+      }
+      /* One sentence: the instruction runs straight into the address. */
+      .foot {
+        gap: 1.2cqw;
+      }
+      .name {
+        font-weight: 600;
+        font-size: 7cqw;
+        line-height: 1;
+        letter-spacing: -0.02em;
+      }
+      .what,
+      .go {
+        font-size: 2.6cqw;
+        line-height: 1.2;
+      }
+      .case {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+      }
+      .url {
+        font-weight: 600;
+        font-size: 3.6cqw;
+        line-height: 1.1;
+      }
+      .note {
+        font-family: "Familjen Grotesk", sans-serif;
+        font-size: 3.6mm;
+        color: #5a606b;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="sheet">
+      <div class="frame">
+        <div class="card">
+          <div class="head">
+            <p class="name">Stephen Sookra</p>
+            <p class="what">Six projects in a lit letter case</p>
+          </div>
+          <img class="case" alt="" />
+          <div class="foot">
+            <p class="go">Point a phone at this card on</p>
+            <p class="url">stephensookra.com/ar/marker</p>
+          </div>
+        </div>
+      </div>
+      <p class="note pdf-only">Print on any paper and cut along the line.</p>
+    </div>
+    <script>
+      const params = new URLSearchParams(location.search);
+      const mode = params.get("mode") === "pdf" ? "pdf" : "png";
+      document.body.className = mode;
+      document.querySelector(".case").src = params.get("poster");
+      if (mode === "pdf") document.querySelector(".frame").className = "cut";
+      else document.querySelector(".pdf-only").remove();
+    </script>
+  </body>
+</html>

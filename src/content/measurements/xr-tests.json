@@ -1,5 +1,11 @@
 {
   "quest3s": { "name": "Meta Quest 3S", "status": "not run" },
   "androidXrEmulator": { "name": "Android XR Emulator", "status": "not run" },
-  "visionPro": { "name": "Apple Vision Pro", "status": "not run" }
+  "visionPro": { "name": "Apple Vision Pro", "status": "not run" },
+  "iphoneQuickLook": { "name": "iPhone with AR Quick Look", "status": "not run" },
+  "androidSceneViewer": { "name": "Android with Scene Viewer", "status": "not run" },
+  "markerIphone": { "name": "iPhone Safari", "status": "not run" },
+  "markerAndroid": { "name": "Android Chrome", "status": "not run" },
+  "questPassthrough": { "name": "Meta Quest 3S", "status": "not run" },
+  "visionImmersive": { "name": "Apple Vision Pro", "status": "not run" }
 }

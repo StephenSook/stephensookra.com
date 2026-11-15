@@ -4,7 +4,7 @@ import { CaseLightBridge } from "@/components/CaseLightBridge";
 import { CasePoster } from "@/components/CasePoster";
 import { CaseStage } from "@/components/CaseStage";
 import { XrDoor } from "@/components/XrDoor";
-import { doorNote, xrTests } from "@/content/measurements/xr";
+import { doorNote, passthroughNote, xrTests } from "@/content/measurements/xr";
 import { ProjectRow } from "@/components/ProjectRow";
 import { featured } from "@/content";
 
@@ -33,7 +33,7 @@ export default function CasePage() {
         </CaseStage>
       </div>
       <div className="frame">
-        <XrDoor note={doorNote(xrTests)} />
+        <XrDoor note={doorNote(xrTests)} arNote={passthroughNote(xrTests)} />
       </div>
       <div className="frame section">
         <div className="case">

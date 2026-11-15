@@ -35,6 +35,36 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
 OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
+## model-viewer (phone AR viewer)
+
+- Package: @google/model-viewer 4.4.0 (npm), from https://github.com/google/model-viewer
+- Files: `public/vendor/model-viewer/4.4.0/model-viewer.min.js` (the package's `dist/model-viewer.min.js`,
+  unmodified; its SHA-256 and the tarball integrity are in `source.json` beside it)
+- Used for: showing the case in 3D on /case/ar and handing it to Scene Viewer or WebXR; it loads only after a tap
+- Licence: Apache License 2.0, full text in `public/vendor/model-viewer/4.4.0/LICENSE`. The build bundles three.js
+  (MIT, Copyright 2010-2026 Three.js Authors) and Lit (BSD-3-Clause, Copyright Google LLC); their licence notices
+  are kept in the file's own comments.
+
+## 8th Wall engine (marker AR)
+
+- Package: @8thwall/engine 0.1.0 (npm), the open-source engine from https://github.com/8thwall/8thwall
+- Files: `public/vendor/8thwall/0.1.0/xr.js` and `xr-tracking.js` (the package's `dist/` files, unmodified; their
+  SHA-256 and the tarball integrity are in `source.json` beside them). Not the separately licensed
+  `@8thwall/engine-binary`.
+- Used for: finding the printed card in the camera picture on /ar/marker; it loads only after a press
+- The card's grayscale target image was made with @8thwall/image-target-cli 1.0.0 (MIT), a build tool that does not
+  ship with the site.
+
+```
+Copyright 2026 Niantic Spatial, Inc.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+
 ## Familjen Grotesk (headset labels)
 
 - Package: @fontsource/familjen-grotesk 5.3.0 (npm), from https://github.com/Familjen-Sthlm/Familjen-Grotesk

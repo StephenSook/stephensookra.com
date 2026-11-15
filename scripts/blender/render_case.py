@@ -185,4 +185,6 @@ def main():
     print(f"rendered {a.scheme} poster to {scene.render.filepath}")
 
 
-main()
+# Run as a Blender script (-P); export_case.py imports the helpers above without rendering.
+if __name__ == "__main__":
+    main()

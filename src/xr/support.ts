@@ -4,15 +4,20 @@ import { SITE_URL } from "@/lib/site";
 export const SUPPORT_TIMEOUT_MS = 1500;
 
 /**
- * Whether this browser can start an immersive VR session. Any failure (no WebXR, a
- * thrown or rejected check, or no answer in time) counts as no, so the door never offers
- * a mode the device cannot enter. This loads nothing: it only asks the browser.
+ * Whether this browser can start an immersive session of `mode` (VR, or passthrough AR).
+ * Any failure (no WebXR, a thrown or rejected check, or no answer in time) counts as no,
+ * so the door never offers a mode the device cannot enter. This loads nothing: it only
+ * asks the browser.
  */
-export async function xrSupported(xr: XRSystem | undefined, timeoutMs = SUPPORT_TIMEOUT_MS): Promise<boolean> {
+export async function xrSupported(
+  xr: XRSystem | undefined,
+  timeoutMs = SUPPORT_TIMEOUT_MS,
+  mode: XRSessionMode = "immersive-vr",
+): Promise<boolean> {
   if (!xr || typeof xr.isSessionSupported !== "function") return false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const answer = xr.isSessionSupported("immersive-vr");
+    const answer = xr.isSessionSupported(mode);
     const timeout = new Promise<boolean>((resolve) => {
       timer = setTimeout(() => resolve(false), timeoutMs);
     });

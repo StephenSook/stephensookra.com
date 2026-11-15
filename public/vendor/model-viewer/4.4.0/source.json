@@ -1,0 +1,8 @@
+{
+  "package": "@google/model-viewer",
+  "version": "4.4.0",
+  "tarballIntegrity": "sha512-8z1SB5sPlzKoak5mdx/D31brBakPYm3Qi31EfAucHAUrtrHHCbabypkKvSwReYhUpPaxyJ46oT47uWE/hrs1Zw==",
+  "file": "dist/model-viewer.min.js",
+  "sha256": "18b2e711035aa4705ee281530a55dc2338ff05eed3d70ae16d54105282a75ed5",
+  "license": "Apache-2.0"
+}

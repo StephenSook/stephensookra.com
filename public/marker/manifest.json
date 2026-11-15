@@ -1,0 +1,28 @@
+{
+  "cardSha256": "ebe5c4903f4df2741772ce5867f2d01bf75ac6396b9ff52dd53f205757be49c3",
+  "tool": "@8thwall/image-target-cli 1.0.0",
+  "card": "/marker/20261115150210-ebe5c4903f4d/card.png",
+  "pdf": "/marker/20261115150210-ebe5c4903f4d/card.pdf",
+  "width": 1600,
+  "height": 1200,
+  "caseBox": {
+    "x": 0.0914,
+    "y": 0.1773,
+    "width": 0.8172,
+    "height": 0.6818
+  },
+  "target": {
+    "name": "card",
+    "type": "PLANAR",
+    "imagePath": "/marker/20261115150210-ebe5c4903f4d/card-luminance.png",
+    "properties": {
+      "left": 0,
+      "top": 0,
+      "width": 1200,
+      "height": 1600,
+      "isRotated": true,
+      "originalWidth": 1200,
+      "originalHeight": 1600
+    }
+  }
+}

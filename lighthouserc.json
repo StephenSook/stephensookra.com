@@ -10,7 +10,11 @@
         "http://localhost:3200/resume",
         "http://localhost:3200/about",
         "http://localhost:3200/proof",
-        "http://localhost:3200/case"
+        "http://localhost:3200/case",
+        "http://localhost:3200/case/ar",
+        "http://localhost:3200/ar/marker",
+        "http://localhost:3200/ar/marker/card",
+        "http://localhost:3200/vision"
       ],
       "numberOfRuns": 3,
       "settings": {
