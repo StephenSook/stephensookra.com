@@ -158,8 +158,19 @@ describe("honesty rules", () => {
   });
 
   it("marks the solo builds", () => {
-    for (const slug of ["case-light", "glare-zone", "varsity", "instanter"])
+    // Aloud confirmed solo by Stephen on 2026-11-15.
+    for (const slug of ["case-light", "glare-zone", "varsity", "instanter", "aloud"])
       expect(projectBySlug(slug)!.solo, slug).toBe(true);
+  });
+
+  it("uses VARSITY's official event name (its README) on the card and in both awards", () => {
+    // "IBM SkillsBuild Sports Challenges" is only the organizer's grand-prize branding.
+    const event = "IBM SkillsBuild AI Builders Challenge (June)";
+    const varsity = projectBySlug("varsity")!;
+    expect(varsity.result.state === "placed" && varsity.result.event).toBe(event);
+    const varsityAwards = awards.filter((a) => a.project === "VARSITY");
+    expect(varsityAwards).toHaveLength(2);
+    for (const a of varsityAwards) expect(a.event).toBe(event);
   });
 
   it("carries the synthetic-records disclosure for Instanter and Trace", () => {

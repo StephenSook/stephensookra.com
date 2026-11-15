@@ -8,6 +8,9 @@ const CI_TEXT: Record<CiState, string> = {
   none: "No CI runs",
 };
 
+/** A star count this small says nothing about the work, so it is left out. */
+const MIN_STARS_SHOWN = 10;
+
 /** Live repo facts read from GitHub at build time; "not available" when the read failed. */
 export function RepoStatusView({ status }: { status: RepoStatus }) {
   if (status.state === "unavailable") {
@@ -17,12 +20,13 @@ export function RepoStatusView({ status }: { status: RepoStatus }) {
       </p>
     );
   }
-  const stars = `${status.stars} ${status.stars === 1 ? "star" : "stars"}`;
+  const license = status.license && status.license !== "NOASSERTION" ? status.license : null;
   return (
     <ul className="repo-status" data-state="ok" aria-label="Live repository details">
       <li>Last commit {formatDate(status.lastCommit)}</li>
       <li data-ci={status.ci}>{CI_TEXT[status.ci]}</li>
-      <li>{stars}</li>
+      {license ? <li>{license} licence</li> : null}
+      {status.stars >= MIN_STARS_SHOWN ? <li>{status.stars} stars</li> : null}
     </ul>
   );
 }
