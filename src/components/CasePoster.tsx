@@ -1,14 +1,16 @@
 import { getImageProps } from "next/image";
+import manifest from "../../public/case/manifest.json";
 
 /**
  * Still renders of the lit case, made in Blender from the same model as the 3D scene
  * (scripts/blender/render_case.py). Phones, reduced motion and no-WebGL see only this.
+ * The manifest names the current generation, so both posters always come from one run.
  */
 export const POSTER = {
-  light: "/case/poster-light.webp",
-  dark: "/case/poster-dark.webp",
-  width: 1600,
-  height: 900,
+  light: manifest.light,
+  dark: manifest.dark,
+  width: manifest.width,
+  height: manifest.height,
 } as const;
 
 const SIZES = "(min-width: 1280px) 1216px, calc(100vw - 2rem)";

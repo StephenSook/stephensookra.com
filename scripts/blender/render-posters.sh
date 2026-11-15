@@ -43,18 +43,31 @@ render light "#F1F2F4"
 render dark "#0F1115"
 
 RENDERER=$("$BLENDER" --version 2>/dev/null | head -1)
-cat > "$WORK/manifest.json" <<JSON
+
+# Publish as one generation: a new folder that nothing points at yet, then the manifest
+# (the only pointer the site reads) swapped in with a single atomic rename. If anything
+# fails before the rename, the old manifest still names a complete old generation.
+GEN="$(date -u +%Y%m%d%H%M%S)-$(echo "$LAYOUT_SHA" | cut -c1-12)"
+mkdir "$DEST/$GEN"
+mv "$WORK/poster-light.webp" "$DEST/$GEN/poster-light.webp"
+mv "$WORK/poster-dark.webp" "$DEST/$GEN/poster-dark.webp"
+cat > "$DEST/.manifest.json.tmp" <<JSON
 {
   "specSha256": "$LAYOUT_SHA",
   "renderer": "$RENDERER",
-  "files": ["poster-light.webp", "poster-dark.webp"],
+  "light": "/case/$GEN/poster-light.webp",
+  "dark": "/case/$GEN/poster-dark.webp",
   "width": $WIDTH,
   "height": $HEIGHT
 }
 JSON
+mv "$DEST/.manifest.json.tmp" "$DEST/manifest.json"
 
-# Publish only now that both posters exist; the manifest goes last.
-mv "$WORK/poster-light.webp" "$DEST/poster-light.webp"
-mv "$WORK/poster-dark.webp" "$DEST/poster-dark.webp"
-mv "$WORK/manifest.json" "$DEST/manifest.json"
-echo "wrote $DEST/poster-light.webp, $DEST/poster-dark.webp and $DEST/manifest.json (renders in $WORK)"
+# Older generations are now unreferenced; remove them (and any loose files from before).
+for old in "$DEST"/*; do
+  case "$old" in
+    "$DEST/$GEN" | "$DEST/manifest.json") ;;
+    *) python3 -c "import shutil,sys,os; p=sys.argv[1]; shutil.rmtree(p) if os.path.isdir(p) else os.remove(p)" "$old" ;;
+  esac
+done
+echo "published generation $GEN to $DEST (renders in $WORK)"

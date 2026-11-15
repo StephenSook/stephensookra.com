@@ -39,4 +39,15 @@ describe("case posters", () => {
       expect(POSTER.width / POSTER.height).toBeCloseTo(16 / 9, 6);
     });
   }
+
+  it("serves the posters of one generation, named by the manifest", () => {
+    // Each render run publishes a new folder; the manifest is the single pointer to it,
+    // so a half-finished run can never pair a new poster with an old one.
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    expect(POSTER.light).toBe(manifest.light);
+    expect(POSTER.dark).toBe(manifest.dark);
+    const folder = (p: string) => p.split("/").slice(0, -1).join("/");
+    expect(folder(manifest.light)).toBe(folder(manifest.dark));
+    expect(folder(manifest.light)).toMatch(/^\/case\/[0-9]{14}-[0-9a-f]{12}$/);
+  });
 });
