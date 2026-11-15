@@ -1,0 +1,5 @@
+{
+  "quest3s": { "name": "Meta Quest 3S", "status": "not run" },
+  "androidXrEmulator": { "name": "Android XR Emulator", "status": "not run" },
+  "visionPro": { "name": "Apple Vision Pro", "status": "not run" }
+}

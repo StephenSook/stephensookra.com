@@ -356,6 +356,64 @@ p {
   padding-inline: var(--gutter);
 }
 
+/* ------------------------------------------------------- the headset door */
+
+/* Under the case: Enter VR in a headset browser, the Quest link on a laptop, nothing on a
+   phone. Its HTML is empty until the browser answers, so laptops reserve its height. */
+.xr-door {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+  .xr-door {
+    min-height: 2.75rem;
+  }
+}
+
+.xr-door__enter {
+  min-height: 2.75rem;
+  padding: 0 1.25rem;
+  border-radius: 0.25rem;
+  background: var(--slot);
+  color: #14161b;
+  font: 600 var(--step-0) / 1 var(--font-sans);
+  cursor: pointer;
+}
+
+.xr-door__launch {
+  font-weight: 600;
+}
+
+.xr-door__note {
+  color: var(--muted);
+  font-size: var(--step--1);
+}
+
+.xr-door__status {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: var(--step--1);
+}
+
+.xr-door__status:empty {
+  display: none;
+}
+
+/* The headset draws its own frames; the page canvas only hosts the WebGL context. */
+.xr-session {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 2px;
+  height: 2px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* ---------------------------------------------------------------- the case */
 
 /*

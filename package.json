@@ -15,14 +15,17 @@
     "e2e": "playwright test",
     "links": "vitest run --config vitest.links.config.mts",
     "case:layout": "node scripts/export-case-layout.mjs",
-    "case:posters": "npm run case:layout && sh scripts/blender/render-posters.sh"
+    "case:posters": "npm run case:layout && sh scripts/blender/render-posters.sh",
+    "loops": "sh scripts/loops/cut-loops.sh"
   },
   "dependencies": {
     "@react-three/fiber": "9.8.2",
+    "@react-three/xr": "6.6.32",
     "next": "16.4.6",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "three": "0.187.0",
+    "troika-three-text": "0.53.1",
     "zod": "4.6.7"
   },
   "devDependencies": {
@@ -40,6 +43,7 @@
     "@vitejs/plugin-react": "6.3.0",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
+    "iwer": "2.8.0",
     "jsdom": "31.0.1",
     "schema-dts": "2.1.0",
     "tailwindcss": "4.3.3",

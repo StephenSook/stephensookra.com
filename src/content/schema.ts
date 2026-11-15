@@ -83,6 +83,20 @@ export const projectSchema = z.object({
       alt: z.string().min(10),
     })
     .optional(),
+  /**
+   * A short silent loop the headset card plays, cut from the project's own film by
+   * scripts/loops/cut-loops.sh (film id, start and length match its row there).
+   */
+  loop: z
+    .object({
+      src: z.string().regex(/^\/loops\/[a-z0-9-]+\.mp4$/),
+      width: z.number().int().positive(),
+      height: z.number().int().positive(),
+      film: z.string().regex(/^[A-Za-z0-9_-]{11}$/),
+      start: z.number().nonnegative(),
+      length: z.number().positive().max(10),
+    })
+    .optional(),
   links: z.array(linkSchema),
   disclosure: z.string().min(10).optional(),
   caseStudy: caseStudySchema.optional(),
