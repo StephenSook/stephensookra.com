@@ -1,7 +1,7 @@
-import type { XrEndReason } from "./types";
+import type { XrEndReason, XrMode } from "./types";
 
 type Session = { end(): Promise<void> | void };
-type Store = { enterVR(): Promise<Session | undefined | unknown> };
+type Store = { enterVR(): Promise<Session | undefined | unknown>; enterAR(): Promise<Session | undefined | unknown> };
 type Callbacks = { onStarted: () => void; onEnded: (reason: XrEndReason) => void };
 type Xr = { requestSession: (...args: never[]) => Promise<unknown> };
 
@@ -11,7 +11,7 @@ export function reasonOf(error: unknown): XrEndReason {
 }
 
 /**
- * Owns the request for an immersive session.
+ * Owns the request for an immersive session, VR or passthrough AR.
  * - enter() calls the store synchronously, so a press handler that calls it keeps the
  *   request inside the user's gesture (WebKit requires that; Chromium allows a short delay).
  * - One request at a time.
@@ -30,8 +30,8 @@ export function createEntry(
   let pending = false;
   let released = false;
 
-  /** Calls store.enterVR(), keeping the browser's own session promise from inside it. */
-  function ask(): { result: Promise<unknown>; granted: Promise<unknown> | undefined } {
+  /** Calls the store's enter, keeping the browser's own session promise from inside it. */
+  function ask(mode: XrMode): { result: Promise<unknown>; granted: Promise<unknown> | undefined } {
     let granted: Promise<unknown> | undefined;
     const own = xr && Object.prototype.hasOwnProperty.call(xr, "requestSession");
     const original = xr?.requestSession;
@@ -39,7 +39,7 @@ export function createEntry(
       xr.requestSession = ((...args: never[]) => (granted = original.apply(xr, args))) as Xr["requestSession"];
     }
     try {
-      return { result: store.enterVR(), granted };
+      return { result: mode === "ar" ? store.enterAR() : store.enterVR(), granted };
     } finally {
       if (xr && original) {
         if (own) xr.requestSession = original;
@@ -49,13 +49,13 @@ export function createEntry(
   }
 
   return {
-    enter() {
+    enter(mode: XrMode = "vr") {
       if (pending || released) return;
       pending = true;
       let granted: Promise<unknown> | undefined;
       let result: Promise<unknown>;
       try {
-        ({ result, granted } = ask());
+        ({ result, granted } = ask(mode));
       } catch (error) {
         pending = false;
         if (!released) callbacks.onEnded(reasonOf(error));

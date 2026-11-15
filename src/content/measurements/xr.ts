@@ -84,3 +84,16 @@ export function doorNote(tests: XrTests): string {
     withArticle: ["androidXrEmulator"],
   });
 }
+
+/**
+ * The line beside Place on your wall (passthrough on Meta Quest). Empty while its record
+ * matches the headset's, since the door's own line then says the same; otherwise it says
+ * where passthrough stands on its own.
+ */
+export function passthroughNote(tests: XrTests): string {
+  const wall = tests.questPassthrough;
+  if (wall.status === tests.quest3s.status) return "";
+  if (wall.status === "passed") return `Place on your wall was tested on ${wall.name}.`;
+  if (wall.status === "failed") return `The last test of Place on your wall on ${wall.name} did not pass.`;
+  return "Place on your wall is not yet tested.";
+}

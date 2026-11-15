@@ -10,7 +10,13 @@ function fakeStore() {
         settle = { resolve, reject };
       }),
   );
-  return { enterVR, settle: () => settle! };
+  const enterAR = vi.fn(
+    () =>
+      new Promise((resolve, reject) => {
+        settle = { resolve, reject };
+      }),
+  );
+  return { enterVR, enterAR, settle: () => settle! };
 }
 const session = () => ({ end: vi.fn(async () => {}) });
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -26,6 +32,17 @@ describe("createEntry", () => {
     await flush();
     expect(cb.onStarted).toHaveBeenCalledTimes(1);
     expect(cb.onEnded).not.toHaveBeenCalled();
+  });
+
+  it("asks for passthrough with enter('ar'), the same way", async () => {
+    const store = fakeStore();
+    const cb = { onStarted: vi.fn(), onEnded: vi.fn() };
+    createEntry(store, cb).enter("ar");
+    expect(store.enterAR).toHaveBeenCalledTimes(1);
+    expect(store.enterVR).not.toHaveBeenCalled();
+    store.settle().resolve(session());
+    await flush();
+    expect(cb.onStarted).toHaveBeenCalledTimes(1);
   });
 
   it("does not ask again while a request is pending", () => {
@@ -110,7 +127,8 @@ function storeOverXr(xr: { requestSession: (mode: string) => Promise<unknown> })
     });
     return granted;
   });
-  return { enterVR, failSetup: (e: unknown) => failSetup(e), passSetup: () => passSetup() };
+  const enterAR = vi.fn(async () => undefined);
+  return { enterVR, enterAR, failSetup: (e: unknown) => failSetup(e), passSetup: () => passSetup() };
 }
 
 describe("createEntry, when renderer setup fails after the browser granted a session", () => {

@@ -1,7 +1,7 @@
-// The headset session. Loaded only after an Enter VR press (dynamic import from the door),
-// so none of this, @react-three/xr or troika, is in any page's first load.
+// The headset session, VR or passthrough AR. Loaded only after a press on the door (dynamic
+// import), so none of this, @react-three/xr or troika, is in any page's first load.
 import { Canvas, useFrame } from "@react-three/fiber";
-import { XR, XROrigin, createXRStore, type XRStore } from "@react-three/xr";
+import { XR, XROrigin, createXRStore, useXR, type XRStore } from "@react-three/xr";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { featured } from "@/content";
@@ -21,6 +21,8 @@ import { createPointing, type Pointing } from "./pointing";
 import { createPresses } from "./press";
 import type { XrSessionProps } from "./types";
 import { createVideoController } from "./video";
+import type { WallPose } from "./wall";
+import { WallFinder } from "./WallFinder";
 
 const layout = buildLayout(specJson);
 const planes = pickPlanes(layout);
@@ -49,6 +51,9 @@ function makeStore(origin: string): XRStore {
     frameRate: "mid",
     // Controller and hand models from this site, never a CDN.
     baseAssetPath: xrAssetBase(origin),
+    // Passthrough asks for hit test, anchors and plane and mesh detection (the library's
+    // defaults, all optional); no DOM overlay, which the headset browsers do not offer.
+    domOverlay: false,
     // Select only: no grabbing or teleporting, and no head-gaze or screen pointers.
     controller: { grabPointer: false, teleportPointer: false },
     hand: { grabPointer: false, teleportPointer: false },
@@ -58,10 +63,10 @@ function makeStore(origin: string): XRStore {
 }
 
 /**
- * Asks for VR once mounted (that is the first Enter VR press), hands the door a way to ask
- * again from a later press, and reports how each session ends. The door keeps this mounted
- * between visits; only a real unmount (leaving the page) releases it, which ends a running
- * session and any session the browser grants afterwards.
+ * Hands the door a way to ask for VR or passthrough (the door asks at once for the first
+ * press, then from later presses), and reports how each session ends. The door keeps this
+ * mounted between visits; only a real unmount (leaving the page) releases it, which ends a
+ * running session and any session the browser grants afterwards.
  */
 function Session({ store, onEnded, onReady }: { store: XRStore } & Pick<XrSessionProps, "onEnded" | "onReady">) {
   const callbacks = useRef({ onEnded, onReady });
@@ -69,7 +74,6 @@ function Session({ store, onEnded, onReady }: { store: XRStore } & Pick<XrSessio
     callbacks.current = { onEnded, onReady };
   });
   const entry = useRef<ReturnType<typeof createEntry> | null>(null);
-  const asked = useRef(false);
   const pendingRelease = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => store.onSessionEnd(() => callbacks.current.onEnded("ended")), [store]);
@@ -84,10 +88,6 @@ function Session({ store, onEnded, onReady }: { store: XRStore } & Pick<XrSessio
       onEnded: (reason) => callbacks.current.onEnded(reason),
     }));
     callbacks.current.onReady(current.enter);
-    if (!asked.current) {
-      asked.current = true;
-      current.enter();
-    }
     return () => {
       pendingRelease.current = setTimeout(() => {
         current.release();
@@ -96,6 +96,12 @@ function Session({ store, onEnded, onReady }: { store: XRStore } & Pick<XrSessio
     };
   }, [store]);
   return null;
+}
+
+/** A plain dark space in VR; none in passthrough, where the reader's room shows through. */
+function Background() {
+  const mode = useXR((s) => s.mode);
+  return mode === "immersive-ar" ? null : <color attach="background" args={[SPACE]} />;
 }
 
 /** ?xrstats=1: the session's target rate and the measured rate, under the case. */
@@ -123,7 +129,11 @@ function Stats({ store }: { store: XRStore }) {
   );
 }
 
-/** The case, its slot targets, labels and the exit, placed in front of the viewer. */
+/**
+ * The case, its slot targets, labels and the exit. In VR it stands in front of the viewer;
+ * in passthrough it waits for a wall (WallFinder) and hangs there on a select, held by an
+ * anchor so it stays put while the reader walks around.
+ */
 function HeadsetCase({
   store,
   onCard,
@@ -133,7 +143,7 @@ function HeadsetCase({
 }: {
   store: XRStore;
   onCard: XrSessionProps["onCard"];
-  /** Called each time the case is placed in front of the reader (once per session). */
+  /** Called each time the case is placed, in front of the reader or on a wall (once per session). */
   onPlaced: () => void;
   pointing: Pointing;
   showStats: boolean;
@@ -158,6 +168,16 @@ function HeadsetCase({
   // Selects count on press and release on the same target, however long the press (./press).
   const presses = useMemo(() => createPresses(), []);
   const video = useMemo(() => createVideoController(), []);
+  const mode = useXR((s) => s.mode);
+  const session = useXR((s) => s.session);
+  // Passthrough: where the case would go now, whether a pointer is on the hint's Exit, the
+  // anchor that holds the placed case, and whether the case is on the wall yet.
+  const candidate = useRef<WallPose | null>(null);
+  const onHintExit = useRef(false);
+  const anchor = useRef<XRAnchor | null>(null);
+  /** Set by a select; the next frame makes the anchor (createAnchor needs a live frame). */
+  const anchorWanted = useRef<WallPose | null>(null);
+  const [onWall, setOnWall] = useState(false);
   const texture = useRef<THREE.VideoTexture | null>(null);
   useEffect(() => {
     const t = new THREE.VideoTexture(video.element() as HTMLVideoElement);
@@ -179,6 +199,16 @@ function HeadsetCase({
         if (!prev.session || state.session) return;
         placed.current = false;
         if (group.current) group.current.visible = false;
+        try {
+          anchor.current?.delete();
+        } catch {
+          // ended with the session
+        }
+        anchor.current = null;
+        anchorWanted.current = null;
+        candidate.current = null;
+        onHintExit.current = false;
+        setOnWall(false);
         hovered.current = null;
         selectedRef.current = null;
         setSelected(null);
@@ -205,9 +235,62 @@ function HeadsetCase({
     };
   }, []);
 
+  // Passthrough: a select (any hand or controller) hangs the case where the outline shows it,
+  // unless that select was on the hint's Exit. No wall in view: nothing happens.
+  useEffect(() => {
+    if (!session || mode !== "immersive-ar") return;
+    const place = () => {
+      const pose = candidate.current;
+      const holder = group.current;
+      if (placed.current || !pose || onHintExit.current || !holder) return;
+      holder.position.copy(pose.position);
+      holder.quaternion.copy(pose.quaternion);
+      holder.visible = true;
+      placed.current = true;
+      setOnWall(true);
+      onPlacedRef.current();
+      anchorWanted.current = pose;
+    };
+    session.addEventListener("select", place);
+    return () => session.removeEventListener("select", place);
+  }, [session, mode, store]);
+
   useFrame((state, dt) => {
-    // Place the case once, from the first tracked head pose (yaw only, measured height).
-    if (!placed.current && state.gl.xr.isPresenting && group.current) {
+    // Passthrough: anchor the hung case, inside this frame (an anchor asked for after the
+    // frame has ended is refused).
+    const wanted = anchorWanted.current;
+    if (wanted) {
+      anchorWanted.current = null;
+      const frame = state.gl.xr.getFrame();
+      const space = store.getState().originReferenceSpace;
+      const forSession = store.getState().session;
+      const { x, y, z } = wanted.position;
+      const q = wanted.quaternion;
+      if (frame?.createAnchor && space) {
+        frame.createAnchor(new XRRigidTransform({ x, y, z }, { x: q.x, y: q.y, z: q.z, w: q.w }), space)?.then(
+          (made) => {
+            if (placed.current && store.getState().session === forSession) anchor.current = made;
+            else made.delete();
+          },
+          () => {
+            // No anchors here: the case still stays where it was hung.
+          },
+        );
+      }
+    }
+    // Passthrough: follow the anchor, which the headset keeps on the wall as it tracks.
+    if (anchor.current && group.current) {
+      const frame = state.gl.xr.getFrame();
+      const space = store.getState().originReferenceSpace;
+      const pose = frame && space ? frame.getPose(anchor.current.anchorSpace, space) : undefined;
+      if (pose) {
+        const { position: p, orientation: o } = pose.transform;
+        group.current.position.set(p.x, p.y, p.z);
+        group.current.quaternion.set(o.x, o.y, o.z, o.w);
+      }
+    }
+    // VR: place the case once, from the first tracked head pose (yaw only, measured height).
+    if (mode !== "immersive-ar" && !placed.current && state.gl.xr.isPresenting && group.current) {
       const position = new THREE.Vector3();
       const quaternion = new THREE.Quaternion();
       state.camera.getWorldPosition(position);
@@ -234,72 +317,90 @@ function HeadsetCase({
   }
 
   return (
-    <group ref={group} visible={false}>
-      {planes.map((p) => (
-        <mesh
-          key={p.slug}
-          name={`slot:${p.slug}`}
-          position={[p.x, p.y, p.z]}
-          pointerEventsType={{ deny: "grab" }}
-          onPointerOver={() => {
-            hovered.current = p.slug;
-            pointing.over(p.slug);
-          }}
-          onPointerOut={(e) => {
-            if (hovered.current === p.slug) hovered.current = null;
-            pointing.out(p.slug);
-            presses.leave(p.slug, e.pointerId);
-          }}
-          onPointerDown={(e) => presses.down(p.slug, e.pointerId)}
-          onPointerUp={(e) => presses.up(p.slug, e.pointerId) && select(p.slug)}
-        >
-          <planeGeometry args={[p.w, p.h]} />
-          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-        </mesh>
-      ))}
-      {labels.map((l) => (
-        <Label
-          key={l.slug}
-          text={l.text}
-          size={LABEL_SIZE}
-          position={[l.x, l.y, l.z]}
-          color={l.slug === selected ? "#ffb547" : "#f4efe6"}
+    <>
+      {mode === "immersive-ar" && !onWall && (
+        <WallFinder
+          size={layout}
+          candidateRef={candidate}
+          onExitRef={onHintExit}
+          exit={() => void store.getState().session?.end()}
+          pointing={pointing}
+          presses={presses}
         />
-      ))}
-      <mesh
-        name="exit"
-        position={[0, EXIT.y, layout.depth / 2]}
-        pointerEventsType={{ deny: "grab" }}
-        onPointerDown={(e) => presses.down("exit", e.pointerId)}
-        onPointerUp={(e) => presses.up("exit", e.pointerId) && void store.getState().session?.end()}
-        onPointerOver={() => pointing.over("exit")}
-        onPointerOut={(e) => {
-          pointing.out("exit");
-          presses.leave("exit", e.pointerId);
-        }}
-      >
-        <planeGeometry args={[EXIT.w, EXIT.h]} />
-        <meshBasicMaterial color="#1b1d22" />
-      </mesh>
-      <Label text="Exit VR" size={0.035} position={[0, EXIT.y, layout.depth / 2 + 0.002]} anchorX="center" anchorY="middle" />
-      <CardPanel
-        project={featured.find((p) => p.slug === selected) ?? null}
-        from={selectedFrom(lastOpened)}
-        to={CARD_REST}
-        video={video}
-        texture={getTexture}
-        onClose={() => select(null)}
-        pointing={pointing}
-        presses={presses}
-      />
-      {showStats && <Stats store={store} />}
-    </group>
+      )}
+      <group ref={group} visible={false}>
+        {planes.map((p) => (
+          <mesh
+            key={p.slug}
+            name={`slot:${p.slug}`}
+            position={[p.x, p.y, p.z]}
+            pointerEventsType={{ deny: "grab" }}
+            onPointerOver={() => {
+              hovered.current = p.slug;
+              pointing.over(p.slug);
+            }}
+            onPointerOut={(e) => {
+              if (hovered.current === p.slug) hovered.current = null;
+              pointing.out(p.slug);
+              presses.leave(p.slug, e.pointerId);
+            }}
+            onPointerDown={(e) => presses.down(p.slug, e.pointerId)}
+            onPointerUp={(e) => presses.up(p.slug, e.pointerId) && select(p.slug)}
+          >
+            <planeGeometry args={[p.w, p.h]} />
+            <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+          </mesh>
+        ))}
+        {labels.map((l) => (
+          <Label
+            key={l.slug}
+            text={l.text}
+            size={LABEL_SIZE}
+            position={[l.x, l.y, l.z]}
+            color={l.slug === selected ? "#ffb547" : "#f4efe6"}
+          />
+        ))}
+        <mesh
+          name="exit"
+          position={[0, EXIT.y, layout.depth / 2]}
+          pointerEventsType={{ deny: "grab" }}
+          onPointerDown={(e) => presses.down("exit", e.pointerId)}
+          onPointerUp={(e) => presses.up("exit", e.pointerId) && void store.getState().session?.end()}
+          onPointerOver={() => pointing.over("exit")}
+          onPointerOut={(e) => {
+            pointing.out("exit");
+            presses.leave("exit", e.pointerId);
+          }}
+        >
+          <planeGeometry args={[EXIT.w, EXIT.h]} />
+          <meshBasicMaterial color="#1b1d22" />
+        </mesh>
+        <Label
+          text="Exit VR"
+          size={0.035}
+          position={[0, EXIT.y, layout.depth / 2 + 0.002]}
+          anchorX="center"
+          anchorY="middle"
+        />
+        <CardPanel
+          project={featured.find((p) => p.slug === selected) ?? null}
+          from={selectedFrom(lastOpened)}
+          to={CARD_REST}
+          video={video}
+          texture={getTexture}
+          onClose={() => select(null)}
+          pointing={pointing}
+          presses={presses}
+        />
+        {showStats && <Stats store={store} />}
+      </group>
+    </>
   );
 }
 
 /**
- * The headset mode: a 2 px, invisible canvas on the page (the headset gets its own frames),
- * an XR store, and the case placed 1 m in front of the viewer.
+ * The headset modes: a 2 px, invisible canvas on the page (the headset gets its own frames),
+ * an XR store, and the case placed 1 m in front of the viewer (VR) or on a wall (passthrough).
  */
 export default function XrSession({ onStarted, onEnded, onCard, onReady }: XrSessionProps) {
   const [store] = useState(() => makeStore(window.location.origin));
@@ -312,7 +413,7 @@ export default function XrSession({ onStarted, onEnded, onCard, onReady }: XrSes
       {/* demand: idle between visits; the headset session drives its own frames. */}
       <Canvas flat dpr={1} frameloop="demand" gl={{ antialias: true }}>
         <XR store={store}>
-          <color attach="background" args={[SPACE]} />
+          <Background />
           <ambientLight intensity={1.4} />
           <directionalLight position={[0.6, 1.2, 2]} intensity={2} />
           <XROrigin />

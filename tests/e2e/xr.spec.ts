@@ -7,6 +7,7 @@ import { buildLayout } from "../../src/scene/layout";
 import { CARD_IN_FRONT, CLOSE } from "../../src/xr/cardLayout";
 import { BELOW_EYE, CASE_DISTANCE, pickPlanes } from "../../src/xr/placement";
 import { headsetPageUrl, webLaunchUrl } from "../../src/xr/support";
+import { HINT_AHEAD, HINT_BELOW, HINT_EXIT } from "../../src/xr/wall";
 import { PHONE } from "./helpers";
 
 // Plain Chromium has no XR runtime, so these runs see the laptop and phone doors.
@@ -194,10 +195,10 @@ const videos = (page: Page) =>
     })),
   );
 
-async function questPage(browser: Browser, input: Input) {
+async function questPage(browser: Browser, input: Input, install = INSTALL) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   await context.addInitScript({ content: COUNT_VIDEOS });
-  await context.addInitScript({ content: INSTALL });
+  await context.addInitScript({ content: install });
   if (input === "hand")
     await context.addInitScript({ content: "window.__xrDevice && (window.__xrDevice.primaryInputMode = 'hand');" });
   const page = await context.newPage();
@@ -332,3 +333,134 @@ test("in an emulated Quest 3: a slow pinch (held 600 ms) still opens a card", as
   await expect(status).toHaveText("Aloud card open");
   await context.close();
 });
+
+
+// ------------------------------------------------- passthrough: the case on a real wall
+
+/*
+ * IWER's Synthetic Environment Module (MIT, the office room it ships) gives the emulated
+ * Quest 3 a room with walls, so hit tests, plane detection and anchors run as on a headset.
+ * The room loads from the local package file, never its CDN. The headset stands in the
+ * middle, 1.6 m up, turned to face the wall at z = +1.39.
+ */
+const SEM = readFileSync(join(process.cwd(), "node_modules/@iwer/sem/build/iwer-sem.min.js"), "utf8");
+const ROOM = readFileSync(join(process.cwd(), "node_modules/@iwer/sem/captures/office_small.json"), "utf8");
+const WALL_Z = 1.387;
+const TURNED = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+const installRoom = (head: THREE.Quaternion) => `${IWER}
+;${SEM}
+;(() => {
+  const device = new IWER.XRDevice(IWER.metaQuest3);
+  device.installRuntime({ forceInstall: true });
+  device.installSEM(IWER_SEM.SyntheticEnvironmentModule);
+  device.sem.loadEnvironment(${ROOM});
+  device.position.set(0, ${EYE}, 0);
+  device.quaternion.set(${head.x}, ${head.y}, ${head.z}, ${head.w});
+  window.__xrDevice = device;
+  window.__anchors = [];
+  const create = IWER.XRFrame.prototype.createAnchor;
+  IWER.XRFrame.prototype.createAnchor = function (...args) {
+    const made = create.apply(this, args);
+    made.then((a) => window.__anchors.push(a), () => {});
+    return made;
+  };
+})();`;
+
+/** The hung case's centre: at eye height where the gaze meets the wall, its back on the wall. */
+const wallCentre = new THREE.Vector3(0, EYE, WALL_Z - layout.depth / 2);
+/** A point in the hung case's own space, in the world (it faces -z, so x and z turn round). */
+const onWall = (x: number, y: number, z = layout.depth / 2) => wallCentre.clone().add(new THREE.Vector3(-x, y, -z));
+const wallSlot = (slug: string): Target => {
+  const plane = pickPlanes(layout).find((p) => p.slug === slug)!;
+  return { at: onWall(plane.x, plane.y), name: slug };
+};
+const WALL_CLOSE: Target = { at: onWall(CLOSE.x, CLOSE.y, layout.depth / 2 + CARD_IN_FRONT), name: "close" };
+const WALL_EXIT: Target = { at: onWall(0, EXIT_Y), name: "exit" };
+/** The right hand of a reader turned to face +z. */
+const RIGHT_TURNED = new THREE.Vector3(-0.15, 1.35, 0.25);
+/** Up and behind the reader: on nothing the session draws. */
+const AWAY = new THREE.Vector3(0, 1, -0.3).normalize();
+
+/** Points the right controller along `dir` from `from`, without waiting for it to land anywhere. */
+async function point(page: Page, from: THREE.Vector3, dir: THREE.Vector3) {
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, -1), dir.clone().normalize());
+  await page.evaluate(
+    ({ p, q }) => {
+      const device = (window as unknown as { __xrDevice: any }).__xrDevice; // eslint-disable-line @typescript-eslint/no-explicit-any
+      device.controllers.right.position.set(p[0], p[1], p[2]);
+      device.controllers.right.quaternion.set(q[0], q[1], q[2], q[3]);
+    },
+    { p: from.toArray(), q: q.toArray() },
+  );
+  await frames(page, 3);
+}
+const anchors = (page: Page) => page.evaluate(() => (window as unknown as { __anchors: unknown[] }).__anchors.length);
+
+test("in an emulated Quest 3 in an office: look at a wall, hang the case there, pull a card, exit", async ({ browser }) => {
+  const { context, page, inputsReady } = await questPage(browser, "controller", installRoom(TURNED));
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto("/case");
+  const place = page.getByRole("button", { name: "Place on your wall" });
+  await expect(place).toBeVisible();
+  await expect(page.getByRole("button", { name: "Enter VR" })).toBeVisible();
+  await place.click();
+  const status = page.getByRole("status");
+  await expect(status).toHaveText("Entering passthrough");
+  await inputsReady();
+
+  // A select with the controller pointing away from the hint hangs the case where the reader
+  // looks. Until the first hit test lands, a select does nothing, so try a few times.
+  await point(page, RIGHT_TURNED, AWAY);
+  await expect(async () => {
+    if ((await status.textContent()) === "On your wall") return;
+    await select(page, "controller");
+    await expect(status).toHaveText("On your wall", { timeout: 1500 });
+  }).toPass({ timeout: 20_000 });
+  await expect.poll(() => anchors(page), { message: "the case is held by an anchor" }).toBe(1);
+
+  // The slots are where the maths puts them: on the wall the headset faces, facing back.
+  await selectUntil(page, "controller", wallSlot("instanter"), "Instanter card open", RIGHT_TURNED);
+  await page.waitForTimeout(600); // the card finishes sliding out
+  await selectUntil(page, "controller", WALL_CLOSE, "On your wall", RIGHT_TURNED);
+
+  // The reader walks half a metre to the side and closer: the case stays on the wall.
+  const step = new THREE.Vector3(0.5, 0, 0.4);
+  await page.evaluate(([x, z]) => {
+    const device = (window as unknown as { __xrDevice: { position: { set(x: number, y: number, z: number): void } } })
+      .__xrDevice;
+    device.position.set(x, 1.6, z);
+  }, [step.x, step.z]);
+  const moved = RIGHT_TURNED.clone().add(step);
+  await selectUntil(page, "controller", wallSlot("aloud"), "Aloud card open", moved);
+  await page.waitForTimeout(600);
+  await selectUntil(page, "controller", WALL_CLOSE, "On your wall", moved);
+  await selectUntil(page, "controller", WALL_EXIT, "Left passthrough", moved);
+  await expect(place).toBeFocused();
+  expect(errors).toEqual([]);
+  await context.close();
+});
+
+test("in an emulated Quest 3 looking at the floor: no wall, so nothing is placed, and the hint's Exit works", async ({
+  browser,
+}) => {
+  const down = TURNED.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -1.3));
+  const { context, page, inputsReady } = await questPage(browser, "controller", installRoom(down));
+  await page.goto("/case");
+  await page.getByRole("button", { name: "Place on your wall" }).click();
+  const status = page.getByRole("status");
+  await inputsReady();
+
+  await point(page, RIGHT_TURNED, AWAY);
+  for (let i = 0; i < 3; i++) await select(page, "controller");
+  await expect(status).toHaveText("Entering passthrough");
+  expect(await anchors(page)).toBe(0);
+
+  // The hint (and its Exit) stay in front of the eyes, wherever the reader looks.
+  const eye = new THREE.Vector3(0, EYE, 0);
+  const hint = new THREE.Vector3(0, -HINT_BELOW, -HINT_AHEAD).applyQuaternion(down).add(eye);
+  const exit = new THREE.Vector3(0, HINT_EXIT.y, 0).applyQuaternion(down).add(hint);
+  await selectUntil(page, "controller", { at: exit, name: "exit" }, "Left passthrough", RIGHT_TURNED);
+  await context.close();
+});
+

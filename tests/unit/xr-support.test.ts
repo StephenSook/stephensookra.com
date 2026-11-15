@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { doorNote, testedNote, xrTests, xrTestsSchema, type XrTests } from "@/content/measurements/xr";
+import { doorNote, passthroughNote, testedNote, xrTests, xrTestsSchema, type XrTests } from "@/content/measurements/xr";
 import { headsetPageUrl, webLaunchUrl, xrSupported } from "@/xr/support";
 
 const system = (isSessionSupported: XRSystem["isSessionSupported"]) => ({ isSessionSupported }) as XRSystem;
@@ -14,6 +14,13 @@ describe("xrSupported", () => {
     expect(await xrSupported(system(ask))).toBe(true);
     expect(ask).toHaveBeenCalledWith("immersive-vr");
     expect(await xrSupported(system(async () => false))).toBe(false);
+  });
+
+  it("asks for the mode it is given (immersive-ar for passthrough)", async () => {
+    const ask = vi.fn(async (mode: XRSessionMode) => mode === "immersive-ar");
+    expect(await xrSupported(system(ask), 1500, "immersive-ar")).toBe(true);
+    expect(ask).toHaveBeenCalledWith("immersive-ar");
+    expect(await xrSupported(system(ask))).toBe(false);
   });
 
   it("is false when the check throws or rejects", async () => {
@@ -138,6 +145,19 @@ describe("testedNote (every other mode's line)", () => {
     expect(testedNote(tests, ["iphoneQuickLook", "androidSceneViewer"], "on a phone")).toBe(
       "Tested on iPhone with AR Quick Look. Built for Android with Scene Viewer, not yet tested.",
     );
+  });
+
+  it("adds a passthrough line only when its record differs from the headset's", () => {
+    const run = { date: "2026-11-20", evidence: "Stephen, Quest 3S" };
+    expect(passthroughNote(notRun)).toBe(""); // the headset line already says not yet tested
+    const vrPassed: XrTests = { ...notRun, quest3s: { name: "Meta Quest 3S", status: "passed", ...run } };
+    expect(passthroughNote(vrPassed)).toBe("Place on your wall is not yet tested.");
+    const bothPassed: XrTests = { ...vrPassed, questPassthrough: { name: "Meta Quest 3S", status: "passed", ...run } };
+    expect(passthroughNote(bothPassed)).toBe("");
+    const wallFailed: XrTests = { ...vrPassed, questPassthrough: { name: "Meta Quest 3S", status: "failed", ...run } };
+    expect(passthroughNote(wallFailed)).toBe("The last test of Place on your wall on Meta Quest 3S did not pass.");
+    const onlyWall: XrTests = { ...notRun, questPassthrough: { name: "Meta Quest 3S", status: "passed", ...run } };
+    expect(passthroughNote(onlyWall)).toBe("Place on your wall was tested on Meta Quest 3S.");
   });
 
   it("covers every key in the committed record (no mode without a line)", () => {
