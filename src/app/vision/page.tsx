@@ -21,7 +21,7 @@ export default function VisionPage() {
       </p>
       <VisionRoom />
       <p className="vision-page__note">{testedNote(xrTests, ["visionImmersive"], "in a headset")}</p>
-      <h2 className="vision-page__vr">In VR</h2>
+      <h2 className="vision-page__vr">Elsewhere</h2>
       <XrDoor note={doorNote(xrTests)} arNote={passthroughNote(xrTests)} />
       <p className="case-more">
         <Link href="/case">Back to the case</Link>

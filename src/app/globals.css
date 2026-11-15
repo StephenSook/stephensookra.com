@@ -414,7 +414,8 @@ p {
   aspect-ratio: 16 / 9;
 }
 
-.phone-ar__quicklook {
+.phone-ar__quicklook,
+.phone-ar__picture {
   display: block;
 }
 

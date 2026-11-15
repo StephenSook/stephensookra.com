@@ -77,8 +77,8 @@ test("on an iPhone, the poster is a plain AR Quick Look link to the USDZ, with n
 
   const link = page.locator('a[rel="ar"]');
   await expect(link).toHaveAttribute("href", manifest.usdz);
-  // AR Quick Look opens only when the link's first child is an image (or <model> on Safari 27).
-  expect(await link.evaluate((a) => a.firstElementChild?.tagName)).toBe("IMG");
+  // AR Quick Look opens only when the link's one child is an <img> or <picture> (or <model> on Safari 27).
+  expect(await link.evaluate((a) => [a.children.length, a.firstElementChild?.tagName])).toEqual([1, "PICTURE"]);
   await expect(page.getByText("Tap the case to place it in your room.")).toBeVisible();
   await expect(page.getByRole("button", { name: "See it in 3D and in your room" })).toHaveCount(0);
   expect(requests.filter((u) => VIEWER_SCRIPT.test(u))).toEqual([]);

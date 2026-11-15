@@ -9,7 +9,7 @@ const flush = () => act(async () => new Promise((r) => setTimeout(r, 0)));
 const base: Omit<PhoneArViewProps, "supportsQuickLook" | "hasModelElement" | "loadViewer"> = {
   glb: "/ar/gen/case.glb",
   usdz: "/ar/gen/case.usdz",
-  poster: { src: "/case/gen/poster-light.webp", width: 1600, height: 900 },
+  poster: { src: "/case/gen/poster-light.webp", dark: "/case/gen/poster-dark.webp", width: 1600, height: 900 },
   note: "Built for iPhone with AR Quick Look and Android with Scene Viewer, not yet tested on a phone.",
 };
 
@@ -22,7 +22,14 @@ describe("PhoneArView", () => {
     await flush();
     const link = container.querySelector('a[rel="ar"]')!;
     expect(link).toHaveAttribute("href", "/ar/gen/case.usdz");
-    expect(link.firstElementChild?.tagName).toBe("IMG"); // AR Quick Look needs the image as the link's child
+    // AR Quick Look needs one <img> or <picture> as the link's only child (WebKit blog 8421).
+    expect(link.children).toHaveLength(1);
+    expect(link.firstElementChild?.tagName).toBe("PICTURE");
+    expect(link.querySelector('picture > source[media="(prefers-color-scheme: dark)"]')).toHaveAttribute(
+      "srcset",
+      "/case/gen/poster-dark.webp",
+    );
+    expect(link.querySelector("picture > img")).toHaveAttribute("src", "/case/gen/poster-light.webp");
     expect(loadViewer).not.toHaveBeenCalled();
   });
 

@@ -41,8 +41,9 @@ const closeAll = (streams: MediaStream[]) => streams.forEach((s) => s.getTracks(
  * the first stream, lists the devices, then asks again without checking that the run is still
  * wanted. A Stop during that pause would leave the second camera on. So every camera request
  * the engine makes is tied to the run that was current when it asked; a stream that arrives
- * after that run ended is closed at once (and the engine is told AbortError). Requests from
- * anything else on the page pass straight through.
+ * after that run ended is closed at once and the request never settles, which is what the
+ * engine itself does with a stale request: a rejection would reach the next run as its own
+ * camera failure. Requests from anything else on the page pass straight through.
  */
 function guardCamera() {
   const media = navigator.mediaDevices;
@@ -55,7 +56,7 @@ function guardCamera() {
     const stream = await open(constraints);
     if (!run || run !== cameraRun) {
       closeAll([stream]);
-      throw new DOMException("The camera run had already ended", "AbortError");
+      return new Promise<MediaStream>(() => {});
     }
     run.streams.push(stream);
     return stream;

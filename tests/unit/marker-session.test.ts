@@ -60,9 +60,10 @@ describe("startMarker and the camera", () => {
     session.stop(); // Stop lands while the engine lists devices
     expect(xr8.stop).toHaveBeenCalledTimes(1); // this run owned the engine
     release();
-    const late = await engineResult;
-    expect(late).toBeInstanceOf(DOMException);
-    expect((late as DOMException).name).toBe("AbortError");
+    // Like the engine's own stale-run path: the stream is closed and the request never
+    // settles, so no success or failure from the ended run reaches the next run's pipeline.
+    const outcome = await Promise.race([engineResult, new Promise((r) => setTimeout(() => r("pending"), 30))]);
+    expect(outcome).toBe("pending");
     expect(opened.map((t) => t.readyState)).toEqual(["ended", "ended"]); // no camera left on
   });
 

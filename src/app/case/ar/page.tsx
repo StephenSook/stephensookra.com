@@ -22,7 +22,7 @@ export default function CaseArPage() {
       <PhoneAr
         glb={arManifest.glb}
         usdz={arManifest.usdz}
-        poster={{ src: POSTER.light, width: POSTER.width, height: POSTER.height }}
+        poster={{ src: POSTER.light, dark: POSTER.dark, width: POSTER.width, height: POSTER.height }}
         note={testedNote(xrTests, ["iphoneQuickLook", "androidSceneViewer"], "on a phone")}
       />
       <p className="case-more">

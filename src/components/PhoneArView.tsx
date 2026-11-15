@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 export type PhoneArViewProps = {
   glb: string;
   usdz: string;
-  poster: { src: string; width: number; height: number };
+  /** The case's poster; `dark` is the dark-mode render, picked by the browser. */
+  poster: { src: string; dark?: string; width: number; height: number };
   /** What has and has not been tested, from xr-tests.json (worked out on the server). */
   note: string;
   /** iPhone and iPad Safari: an <a rel="ar"> opens AR Quick Look. */
@@ -57,9 +58,12 @@ export function PhoneArView({ glb, usdz, poster, note, supportsQuickLook, hasMod
     }
   }
 
+  // A <picture> is allowed as AR Quick Look's one link child, like an <img> (WebKit blog 8421).
   const image = (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={poster.src} width={poster.width} height={poster.height} alt={ALT} className="phone-ar__poster" />
+    <picture className="phone-ar__picture">
+      {poster.dark && <source media="(prefers-color-scheme: dark)" srcSet={poster.dark} />}
+      <img src={poster.src} width={poster.width} height={poster.height} alt={ALT} className="phone-ar__poster" />
+    </picture>
   );
 
   return (
