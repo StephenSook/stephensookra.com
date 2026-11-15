@@ -1,0 +1,17 @@
+{
+  "units": "metres",
+  "width": 1.6,
+  "height": 1.0,
+  "depth": 0.3,
+  "frame": 0.035,
+  "divider": 0.008,
+  "shelf": 0.012,
+  "back": 0.004,
+  "smallCellsPerRow": 40,
+  "projectRowHeight": 0.3,
+  "rows": ["small", "small", "A", "B", "small"],
+  "slots": {
+    "A": ["case-light", "glare-zone", "xr-dojo"],
+    "B": ["varsity", "instanter", "aloud"]
+  }
+}
