@@ -8,26 +8,29 @@ import { buildPersonJsonLd } from "@/content/jsonld";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
-// Only the display face is preloaded: it sets the name, the first and largest text.
-// Body and mono load from the stylesheet, so they do not compete with first-screen posters.
+// display: "optional" means a face that is not ready within the brief block period is
+// skipped for that page view instead of swapped in later. next/font's metric-matched
+// fallback is built on local Arial, which Linux and most Android phones lack, so a late
+// swap reflowed whole paragraphs there (Lighthouse CLS 0.13 to 0.16 on Linux CI).
+// The display and body faces are preloaded so they are usually ready in time; the mono
+// face only sets small slot labels and loads from the stylesheet.
 const display = Familjen_Grotesk({
   variable: "--font-familjen",
   subsets: ["latin"],
-  display: "swap",
+  display: "optional",
 });
 
 const body = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
-  display: "swap",
-  preload: false,
+  display: "optional",
 });
 
 const mono = IBM_Plex_Mono({
   variable: "--font-plex-mono",
   subsets: ["latin"],
   weight: "500",
-  display: "swap",
+  display: "optional",
   preload: false,
 });
 
