@@ -1,6 +1,13 @@
 {
   "quest3s": { "name": "Meta Quest 3S", "status": "not run" },
-  "androidXrEmulator": { "name": "Android XR Emulator", "status": "not run" },
+  "androidXrEmulator": {
+    "name": "Android XR Emulator",
+    "status": "partial",
+    "date": "2026-11-15",
+    "evidence": "Emulator screenshots (Chrome's VR permission prompt, in VR, left VR) and a 177 s screen recording of the session, kept by Stephen.",
+    "ran": "Enters VR in Chrome 138 on the Android XR emulator and renders the case (two tracked-pointer inputs reported).",
+    "notRun": "Card pull not run (no scriptable XR input in the emulator). The session was ended from the page with session.end(), not with the in-scene Exit VR button."
+  },
   "visionPro": { "name": "Apple Vision Pro", "status": "not run" },
   "iphoneQuickLook": { "name": "iPhone with AR Quick Look", "status": "not run" },
   "androidSceneViewer": { "name": "Android with Scene Viewer", "status": "not run" },
