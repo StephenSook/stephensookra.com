@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getRepoStatus } from "@/lib/github";
+import { getRepoStatus, getRepoStatuses } from "@/lib/github";
 
 type Route = { status?: number; body?: unknown; raw?: string; throws?: Error };
 
@@ -110,6 +110,14 @@ describe("getRepoStatus", () => {
       "/repos/StephenSook/case-light": { body: { ...okRoutes["/repos/StephenSook/case-light"].body as object, private: true } },
     });
     expect((await getRepoStatus("StephenSook/case-light", fetcher)).state).toBe("unavailable");
+  });
+
+  it("reads each repo once and keys the results by repo", async () => {
+    const { fetcher, calls } = fakeFetch(okRoutes);
+    const statuses = await getRepoStatuses(["StephenSook/case-light", "StephenSook/case-light"], fetcher);
+    expect(Object.keys(statuses)).toEqual(["StephenSook/case-light"]);
+    expect(statuses["StephenSook/case-light"].state).toBe("ok");
+    expect(calls.filter((c) => new URL(c.url).pathname === "/repos/StephenSook/case-light")).toHaveLength(1);
   });
 
   it("sends a token only when GITHUB_TOKEN is set", async () => {

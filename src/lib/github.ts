@@ -56,6 +56,16 @@ async function readJson<T>(fetcher: typeof fetch, path: string, schema: z.ZodTyp
   return parsed.data;
 }
 
+/** Statuses for several repos, each read once, keyed by "owner/name". */
+export async function getRepoStatuses(
+  repos: string[],
+  fetcher: typeof fetch = fetch,
+): Promise<Record<string, RepoStatus>> {
+  const unique = [...new Set(repos)];
+  const results = await Promise.all(unique.map((repo) => getRepoStatus(repo, fetcher)));
+  return Object.fromEntries(results.map((status) => [status.repo, status]));
+}
+
 /**
  * Live facts about one public repo. Any failed read (rate limit, network,
  * timeout, unexpected JSON, or a private repo) yields `unavailable`, which the

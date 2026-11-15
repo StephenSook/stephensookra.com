@@ -29,6 +29,8 @@ export function ProjectRow({ id, letter, heading, projects, statuses = {}, prior
             priority={priorityPosters}
           />
         ))}
+        {/* An empty pigeonhole keeps the two-column phone grid square when the row is odd. */}
+        {projects.length % 2 === 1 ? <div className="slot-empty" aria-hidden="true" /> : null}
       </div>
     </section>
   );
