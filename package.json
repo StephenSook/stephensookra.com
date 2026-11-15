@@ -15,7 +15,8 @@
     "e2e": "playwright test",
     "links": "vitest run --config vitest.links.config.mts",
     "case:layout": "node scripts/export-case-layout.mjs",
-    "case:posters": "npm run case:layout && sh scripts/blender/render-posters.sh"
+    "case:posters": "npm run case:layout && sh scripts/blender/render-posters.sh",
+    "loops": "sh scripts/loops/cut-loops.sh"
   },
   "dependencies": {
     "@react-three/fiber": "9.8.2",

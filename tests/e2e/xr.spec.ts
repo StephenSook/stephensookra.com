@@ -4,6 +4,7 @@ import { expect, test, type Browser, type Page } from "@playwright/test";
 import * as THREE from "three";
 import spec from "../../src/scene/case-spec.json";
 import { buildLayout } from "../../src/scene/layout";
+import { CARD_IN_FRONT, CLOSE } from "../../src/xr/cardLayout";
 import { BELOW_EYE, CASE_DISTANCE, pickPlanes } from "../../src/xr/placement";
 import { headsetPageUrl, webLaunchUrl } from "../../src/xr/support";
 import { PHONE } from "./helpers";
@@ -52,25 +53,41 @@ const INSTALL = `${IWER}
   device.position.set(0, 1.6, 0);
   window.__xrDevice = device;
 })();`;
+// Records every <video> the page creates, to check the one-video rule.
+const COUNT_VIDEOS = `(() => {
+  const make = Document.prototype.createElement;
+  window.__videos = [];
+  Document.prototype.createElement = function (tag, ...rest) {
+    const el = make.call(this, tag, ...rest);
+    if (String(tag).toLowerCase() === "video") window.__videos.push(el);
+    return el;
+  };
+})();`;
 
 const layout = buildLayout(spec);
 const EYE = 1.6;
 const caseCentre = new THREE.Vector3(0, EYE - BELOW_EYE, -CASE_DISTANCE);
 const EXIT_Y = -layout.height / 2 - 0.1;
 
-/** World point on the front of the case for a point in the case's own space. */
-const onCase = (x: number, y: number) => caseCentre.clone().add(new THREE.Vector3(x, y, layout.depth / 2));
+/** World point for a point in the case's own space (z measured from the case centre). */
+const inCase = (x: number, y: number, z: number) => caseCentre.clone().add(new THREE.Vector3(x, y, z));
+const onCase = (x: number, y: number) => inCase(x, y, layout.depth / 2);
 const slotCentre = (slug: string) => {
   const plane = pickPlanes(layout).find((p) => p.slug === slug)!;
   return onCase(plane.x, plane.y);
 };
+const closeButton = inCase(CLOSE.x, CLOSE.y, layout.depth / 2 + CARD_IN_FRONT);
+const cardCentre = inCase(0, 0, layout.depth / 2 + CARD_IN_FRONT);
 
 type Input = "controller" | "hand";
-const FROM = new THREE.Vector3(0.15, 1.35, -0.25);
+/** Where the right hand points from: a little right of and below the eyes. */
+const RIGHT = new THREE.Vector3(0.15, 1.35, -0.25);
+/** Reaching across to the left, past an open card. */
+const LEFT = new THREE.Vector3(-0.45, 1.45, -0.3);
 
-/** Points the right controller or hand at a world point. */
-async function aim(page: Page, input: Input, target: THREE.Vector3) {
-  const dir = target.clone().sub(FROM).normalize();
+/** Points the right controller or hand from `from` at a world point. */
+async function aim(page: Page, input: Input, target: THREE.Vector3, from = RIGHT) {
+  const dir = target.clone().sub(from).normalize();
   const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, -1), dir);
   await page.evaluate(
     ({ input, p, q }) => {
@@ -79,7 +96,7 @@ async function aim(page: Page, input: Input, target: THREE.Vector3) {
       source.position.set(p[0], p[1], p[2]);
       source.quaternion.set(q[0], q[1], q[2], q[3]);
     },
-    { input, p: FROM.toArray(), q: q.toArray() },
+    { input, p: from.toArray(), q: q.toArray() },
   );
   await page.waitForTimeout(150); // a few frames, so the pointer moves onto the target
 }
@@ -101,8 +118,18 @@ async function select(page: Page, input: Input) {
   await page.waitForTimeout(150);
 }
 
+/** Every video the page has made: its source path and whether it is playing. */
+const videos = (page: Page) =>
+  page.evaluate(() =>
+    (window as unknown as { __videos: HTMLVideoElement[] }).__videos.map((v) => ({
+      src: v.getAttribute("src") ? new URL(v.src).pathname : null,
+      playing: !v.paused,
+    })),
+  );
+
 async function questPage(browser: Browser, input: Input) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  await context.addInitScript({ content: COUNT_VIDEOS });
   await context.addInitScript({ content: INSTALL });
   if (input === "hand")
     await context.addInitScript({ content: "window.__xrDevice && (window.__xrDevice.primaryInputMode = 'hand');" });
@@ -116,7 +143,7 @@ async function questPage(browser: Browser, input: Input) {
 }
 
 for (const input of ["controller", "hand"] as const) {
-  test(`in an emulated Quest 3 (${input}): enter, pull a card, switch cards, exit`, async ({ browser }) => {
+  test(`in an emulated Quest 3 (${input}): enter, pull cards, one video at a time, exit`, async ({ browser }) => {
     const { context, page, xrChunks } = await questPage(browser, input);
     await page.goto("/case");
     const enter = page.getByRole("button", { name: "Enter VR" });
@@ -133,18 +160,52 @@ for (const input of ["controller", "hand"] as const) {
     expect(xrChunks.length, "the XR chunk loads on the press").toBeGreaterThan(0);
     await page.waitForTimeout(500); // the case is placed on the first tracked frame
 
+    // Pull the Instanter card: its loop plays.
     await aim(page, input, slotCentre("instanter"));
     await select(page, input);
     await expect(status).toHaveText("Instanter card open");
+    await expect.poll(() => videos(page)).toEqual([{ src: "/loops/instanter.mp4", playing: true }]);
 
+    // The open card blocks the slots behind it: this ray, through the card's centre, would
+    // otherwise go on into A2 and open Glare Zone.
+    await page.waitForTimeout(600); // the card finishes sliding out
+    await aim(page, input, cardCentre);
+    await select(page, input);
+    await expect(status).toHaveText("Instanter card open");
+
+    // Close puts it back and stops the loop.
+    await aim(page, input, closeButton);
+    await select(page, input);
+    await expect(status).toHaveText("In VR");
+    await expect.poll(() => videos(page)).toEqual([{ src: null, playing: false }]);
+
+    // The put-away card takes no selects, even while it is still sliding back in front of
+    // its slot: the slot opens again at once.
+    await aim(page, input, slotCentre("instanter"));
+    await select(page, input);
+    await expect(status).toHaveText("Instanter card open");
+    await page.waitForTimeout(600);
+    await aim(page, input, closeButton);
+    await select(page, input);
+    await expect(status).toHaveText("In VR");
+
+    // Pull Aloud, then Case Light (reaching past the open card): one video, switched.
     await aim(page, input, slotCentre("aloud"));
     await select(page, input);
     await expect(status).toHaveText("Aloud card open");
+    await expect.poll(() => videos(page)).toEqual([{ src: "/loops/aloud.mp4", playing: true }]);
+    await page.waitForTimeout(600);
+    await aim(page, input, slotCentre("case-light"), LEFT);
+    await select(page, input);
+    await expect(status).toHaveText("Case Light card open");
+    await expect.poll(() => videos(page)).toEqual([{ src: "/loops/case-light.mp4", playing: true }]);
 
+    // Exit: back on the page, focus on Enter VR, nothing left playing.
     await aim(page, input, onCase(0, EXIT_Y));
     await select(page, input);
     await expect(status).toHaveText("Left VR");
     await expect(enter).toBeFocused();
+    await expect.poll(() => videos(page)).toEqual([{ src: null, playing: false }]);
     await context.close();
   });
 }

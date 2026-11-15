@@ -22,6 +22,16 @@ const film = (id: string): ProjectLink => ({
 /** Posters are frames from Stephen's own films (their YouTube thumbnails), re-encoded to 720 px WebP. */
 const poster = (slug: string, alt: string) => ({ src: `/posters/${slug}.webp`, width: 720, height: 405, alt });
 
+/** A headset card loop (see scripts/loops/cut-loops.sh): slug, film id, start s, length s, size. */
+const loop = (slug: string, film: string, start: number, length: number, width: number, height: number) => ({
+  src: `/loops/${slug}.mp4`,
+  width,
+  height,
+  film,
+  start,
+  length,
+});
+
 const devpost = (slug: string): ProjectLink => ({
   kind: "devpost",
   url: `https://devpost.com/software/${slug}`,
@@ -56,6 +66,7 @@ export const projects: Project[] = [
       "case-light",
       "Title frame of the Case Light film: a wireframe mail case in the Lens Studio preview with one slot outlined in blue.",
     ),
+    loop: loop("case-light", "lymPgfFXAZ4", 24, 8, 520, 610),
     links: [repo("case-light"), film("lymPgfFXAZ4"), devpost("case-light")],
     caseStudy: {
       evidence:
@@ -100,6 +111,7 @@ export const projects: Project[] = [
       "glare-zone",
       "Title frame of the Glare Zone film: two framed prints under gallery lights, with the seated glare zone shaded on the floor.",
     ),
+    loop: loop("glare-zone", "TMuU6nUypQo", 36, 9, 492, 620),
     links: [repo("glare-zone"), film("TMuU6nUypQo"), devpost("glare-zone")],
     caseStudy: {
       evidence:
@@ -178,6 +190,7 @@ export const projects: Project[] = [
       "varsity",
       "Title frame of the VARSITY film: a stadium at night with the offside line drawn on the pitch.",
     ),
+    loop: loop("varsity", "7e88hmX8Puw", 45, 8, 720, 406),
     links: [
       // The backend's signed-corpus check: real backend computation, no model call.
       tryIt("https://web-chi-wine-13.vercel.app", "https://varsity-api.onrender.com/corpus_integrity", '"verified":true'),
@@ -224,6 +237,7 @@ export const projects: Project[] = [
       "instanter",
       "Title frame of the Instanter film: 4 of 46 Georgia eviction deadlines are ones counting seven days by hand gets wrong.",
     ),
+    loop: loop("instanter", "AyvxUeE9sCs", 95, 8, 720, 406),
     links: [
       // Re-runs the deadline engine on every request.
       tryIt(
@@ -273,6 +287,7 @@ export const projects: Project[] = [
     solo: true,
     repo: "StephenSook/aloud",
     poster: poster("aloud", "Frame from the Aloud film: Stephen takes a selfie on an iPhone, framed by sound alone."),
+    loop: loop("aloud", "2rPntXmDqHQ", 42, 8, 290, 620),
     links: [
       // A product read: a live Open Beauty Facts lookup turned into the spoken summary.
       tryIt("https://aloudbeauty.vercel.app", "https://aloudbeauty.vercel.app/api/product/3337875597197", '"status":"found"'),

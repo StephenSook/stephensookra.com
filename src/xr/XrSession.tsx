@@ -1,31 +1,38 @@
 // The headset session. Loaded only after an Enter VR press (dynamic import from the door),
 // so none of this, @react-three/xr or troika, is in any page's first load.
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { XR, XROrigin, createXRStore, type XRStore } from "@react-three/xr";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { Text } from "troika-three-text";
 import { featured } from "@/content";
 import specJson from "@/scene/case-spec.json";
 import { buildAtlas, readTokens } from "@/scene/caseAssets";
 import { buildLayout } from "@/scene/layout";
 import { createRig, type CaseRig } from "@/scene/rig";
 import { xrAssetBase } from "./assets";
+import { CardPanel } from "./CardPanel";
+import { CARD_IN_FRONT } from "./cardLayout";
+import { Label } from "./Label";
 import { slotLabels, LABEL_SIZE } from "./labels";
 import { pickPlanes, placeCase } from "./placement";
 import type { XrEndReason, XrSessionProps } from "./types";
+import { createVideoController } from "./video";
 
 const layout = buildLayout(specJson);
 const planes = pickPlanes(layout);
 const labels = slotLabels(layout, featured);
 const titleOf = (slug: string) => featured.find((p) => p.slug === slug)?.title ?? slug;
-
-export const FONT_REGULAR = "/xr/fonts/familjen-grotesk-latin-400-normal.woff";
-export const FONT_SEMIBOLD = "/xr/fonts/familjen-grotesk-latin-600-normal.woff";
+/** The front of a slot, where its card starts from, in case space. */
+const selectedFrom = (slug: string | null): [number, number, number] => {
+  const plane = planes.find((p) => p.slug === slug);
+  return plane ? [plane.x, plane.y, plane.z] : CARD_REST;
+};
 
 /** A plain dark space around the case: no room, no walls (design brief section 9). */
 const SPACE = "#0b0c0f";
 const EXIT = { w: 0.3, h: 0.1, y: -layout.height / 2 - 0.1 };
+/** Where a pulled card rests, in case space: centred, 0.35 m in front of the case face. */
+const CARD_REST: [number, number, number] = [0, 0, layout.depth / 2 + CARD_IN_FRONT];
 
 function makeStore(origin: string): XRStore {
   return createXRStore({
@@ -49,27 +56,6 @@ function makeStore(origin: string): XRStore {
 function reasonOf(error: unknown): XrEndReason {
   const name = error instanceof Error || error instanceof DOMException ? error.name : "";
   return name === "SecurityError" || name === "NotAllowedError" ? "blocked" : "failed";
-}
-
-/** SDF text from the self-hosted font. */
-function Label(props: {
-  text: string;
-  size: number;
-  position: [number, number, number];
-  color?: string;
-  font?: string;
-  anchorX?: "left" | "center";
-  anchorY?: "bottom" | "middle";
-}) {
-  const { text, size, color = "#f4efe6", font = FONT_SEMIBOLD, anchorX = "left", anchorY = "bottom" } = props;
-  const mesh = useMemo(() => new Text(), []);
-  const invalidate = useThree((s) => s.invalidate);
-  useEffect(() => {
-    Object.assign(mesh, { text, fontSize: size, color, font, anchorX, anchorY });
-    mesh.sync(() => invalidate());
-  }, [mesh, text, size, color, font, anchorX, anchorY, invalidate]);
-  useEffect(() => () => mesh.dispose(), [mesh]);
-  return <primitive object={mesh} position={props.position} />;
 }
 
 /** Starts the session once <XR> is mounted, and reports how it ends. */
@@ -104,11 +90,28 @@ function HeadsetCase({ store, onCard }: { store: XRStore; onCard: XrSessionProps
   const rig = useRef<CaseRig | null>(null);
   const hovered = useRef<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  // The slot the card last came from: it slides back there when put away.
+  const [lastOpened, setLastOpened] = useState<string | null>(null);
   const selectedRef = useRef<string | null>(null);
   const onCardRef = useRef(onCard);
   useEffect(() => {
     onCardRef.current = onCard;
   });
+
+  // The session's one video element and its texture (design brief: one video at a time).
+  const video = useMemo(() => createVideoController(), []);
+  const texture = useMemo(() => {
+    const t = new THREE.VideoTexture(video.element() as HTMLVideoElement);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }, [video]);
+  useEffect(
+    () => () => {
+      video.stop();
+      texture.dispose();
+    },
+    [video, texture],
+  );
 
   useEffect(() => {
     const built = createRig(layout);
@@ -147,10 +150,12 @@ function HeadsetCase({ store, onCard }: { store: XRStore; onCard: XrSessionProps
     rig.current?.step(hovered.current ?? selectedRef.current, dt);
   });
 
-  function select(slug: string) {
-    const next = selectedRef.current === slug ? null : slug;
+  /** Selecting the open card's slot again, or Close, puts the card back. */
+  function select(slug: string | null) {
+    const next = slug === null || selectedRef.current === slug ? null : slug;
     selectedRef.current = next;
     setSelected(next);
+    if (next) setLastOpened(next);
     onCardRef.current(next ? { slug: next, title: titleOf(next) } : null);
   }
 
@@ -189,6 +194,14 @@ function HeadsetCase({ store, onCard }: { store: XRStore; onCard: XrSessionProps
         <meshBasicMaterial color="#1b1d22" />
       </mesh>
       <Label text="Exit VR" size={0.035} position={[0, EXIT.y, layout.depth / 2 + 0.002]} anchorX="center" anchorY="middle" />
+      <CardPanel
+        project={featured.find((p) => p.slug === selected) ?? null}
+        from={selectedFrom(lastOpened)}
+        to={CARD_REST}
+        video={video}
+        texture={texture}
+        onClose={() => select(null)}
+      />
     </group>
   );
 }
