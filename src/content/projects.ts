@@ -167,7 +167,8 @@ export const projects: Project[] = [
       evidence: "Software Engineer Intern at XR Dojo, an Atlanta XR studio, since March 2026.",
       myPart:
         "I shipped gameplay features for ATL Quest, an AR mobile game in Unity (C#) for XR headsets and phones. " +
-        "I ported a soccer throw mini-game I made in Unity to React Three Fiber with Rapier physics, to test a browser path. " +
+        "The team built ATL Quest's soccer throw mini-game in Unity; I made its browser port in React Three Fiber with Rapier physics, " +
+        "to test a browser path: the throw, scoring, levels, wind, goal detection, and the fixes for Unity's and three.js's different axes. " +
         "I built the Next.js app shell, a marker-based phone AR mode, and a camera-free preview for demos away from the real site.",
       howItWorks:
         "The game runs in Unity (C#) on headsets and phones. The browser port rebuilds the soccer throw in React Three Fiber, " +

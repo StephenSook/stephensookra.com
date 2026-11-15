@@ -199,6 +199,13 @@ describe("honesty rules", () => {
     expect(dojo.links.some((l) => l.kind === "try" || l.kind === "repo")).toBe(false);
   });
 
+  it("credits XR Dojo's Unity soccer game to the team and claims only the browser port", () => {
+    const part = projectBySlug("xr-dojo")!.caseStudy!.myPart;
+    expect(part).not.toMatch(/I made in Unity/i);
+    expect(part).toMatch(/team/i);
+    expect(part).toMatch(/browser port/i);
+  });
+
   it("makes no WebXR claim in tier 1", () => {
     for (const { path, text } of collectStrings({ projects, profile }, "content", []))
       expect(text, path).not.toMatch(/webxr/i);
